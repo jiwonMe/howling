@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "id": "all-any",
+  "revision": "v1",
+  "entryNodeId": "input",
+  "nodes": [
+    {
+      "id": "input",
+      "type": "core.input",
+      "version": 1,
+      "config": {},
+      "inputs": {}
+    },
+    {
+      "id": "lookupA",
+      "type": "core.effect",
+      "version": 1,
+      "config": { "adapter": "test.lookup", "operation": "a" },
+      "inputs": { "request": { "kind": "literal", "value": "A" } }
+    },
+    {
+      "id": "lookupB",
+      "type": "core.effect",
+      "version": 1,
+      "config": { "adapter": "test.lookup", "operation": "b" },
+      "inputs": { "request": { "kind": "literal", "value": "B" } }
+    },
+    {
+      "id": "join",
+      "type": "core.all",
+      "version": 1,
+      "config": { "inputNames": ["a", "b"] },
+      "inputs": {
+        "a": { "kind": "output", "nodeId": "lookupA", "output": "result" },
+        "b": { "kind": "output", "nodeId": "lookupB", "output": "result" }
+      }
+    },
+    {
+      "id": "mapped",
+      "type": "core.map",
+      "version": 1,
+      "config": {},
+      "inputs": {
+        "values": { "kind": "output", "nodeId": "join", "output": "values" }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": { "nodeId": "input", "port": "success" },
+      "target": { "nodeId": "lookupA", "port": "in" }
+    },
+    {
+      "id": "e2",
+      "source": { "nodeId": "input", "port": "success" },
+      "target": { "nodeId": "lookupB", "port": "in" }
+    },
+    {
+      "id": "e3",
+      "source": { "nodeId": "lookupA", "port": "success" },
+      "target": { "nodeId": "join", "port": "a" }
+    },
+    {
+      "id": "e4",
+      "source": { "nodeId": "lookupB", "port": "success" },
+      "target": { "nodeId": "join", "port": "b" }
+    },
+    {
+      "id": "e5",
+      "source": { "nodeId": "join", "port": "success" },
+      "target": { "nodeId": "mapped", "port": "in" }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "howling",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.15.0",
+  "scripts": {
+    "build": "pnpm --filter @howling/core build",
+    "test": "pnpm --filter @howling/core test",
+    "typecheck": "pnpm --filter @howling/core typecheck"
+  }
+}
