@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRuntimeApp } from "./app.js";
 import { loadRuntimeConfig } from "./config.js";
+import { createRuntimeHost } from "./coordinator/host.js";
 import { openSqlite } from "./db/client.js";
 import { upsertIdentity } from "./db/identity.js";
 import { migrateSqlite } from "./db/migrate.js";
@@ -19,11 +20,15 @@ const migrations = join(
 );
 migrateSqlite(db, migrations);
 upsertIdentity(db, config);
-const app = createRuntimeApp(db);
+const host = createRuntimeHost({ db });
+host.recover();
+await host.waitIdle();
+const app = createRuntimeApp(db, host);
 const gateway = startRuntimeGateway(config, readRuntimeToken(config));
 await app.listen({ host: config.listenHost, port: config.listenPort });
 
 const shutdown = () => {
+  host.stop();
   gateway.stop();
   void app.close().then(() => db.close());
 };

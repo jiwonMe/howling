@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "id": "delay-effect",
+  "revision": "v1",
+  "entryNodeId": "input",
+  "nodes": [
+    {
+      "id": "input",
+      "type": "core.input",
+      "version": 1,
+      "config": {},
+      "inputs": {}
+    },
+    {
+      "id": "wait1",
+      "type": "core.delay",
+      "version": 1,
+      "config": { "durationMs": 50 },
+      "inputs": {}
+    },
+    {
+      "id": "wait2",
+      "type": "core.delay",
+      "version": 1,
+      "config": { "durationMs": 50 },
+      "inputs": {}
+    },
+    {
+      "id": "echo",
+      "type": "core.effect",
+      "version": 1,
+      "config": { "adapter": "test.echo", "operation": "send" },
+      "inputs": {
+        "request": {
+          "kind": "literal",
+          "value": { "ok": true }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": { "nodeId": "input", "port": "success" },
+      "target": { "nodeId": "wait1", "port": "in" }
+    },
+    {
+      "id": "e2",
+      "source": { "nodeId": "wait1", "port": "success" },
+      "target": { "nodeId": "wait2", "port": "in" }
+    },
+    {
+      "id": "e3",
+      "source": { "nodeId": "wait2", "port": "success" },
+      "target": { "nodeId": "echo", "port": "in" }
+    }
+  ]
+}

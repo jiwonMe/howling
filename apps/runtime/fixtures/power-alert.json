@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "id": "power-alert",
+  "revision": "v1",
+  "entryNodeId": "input",
+  "nodes": [
+    {
+      "id": "input",
+      "type": "core.input",
+      "version": 1,
+      "config": {},
+      "inputs": {}
+    },
+    {
+      "id": "mean",
+      "type": "analysis.rolling-mean",
+      "version": 1,
+      "config": { "windowSize": 5 },
+      "inputs": {
+        "value": {
+          "kind": "output",
+          "nodeId": "input",
+          "output": "value",
+          "path": "/power"
+        }
+      }
+    },
+    {
+      "id": "threshold",
+      "type": "core.condition",
+      "version": 1,
+      "config": { "operator": "gt" },
+      "inputs": {
+        "left": { "kind": "output", "nodeId": "mean", "output": "mean" },
+        "right": { "kind": "literal", "value": 1000 }
+      }
+    },
+    {
+      "id": "notify",
+      "type": "core.effect",
+      "version": 1,
+      "config": { "adapter": "test.notifications", "operation": "send" },
+      "inputs": {
+        "request": {
+          "kind": "literal",
+          "value": { "message": "최근 전력 사용량이 기준을 초과했습니다." }
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": { "nodeId": "input", "port": "success" },
+      "target": { "nodeId": "mean", "port": "in" }
+    },
+    {
+      "id": "e2",
+      "source": { "nodeId": "mean", "port": "success" },
+      "target": { "nodeId": "threshold", "port": "in" }
+    },
+    {
+      "id": "e3",
+      "source": { "nodeId": "threshold", "port": "true" },
+      "target": { "nodeId": "notify", "port": "in" }
+    }
+  ]
+}

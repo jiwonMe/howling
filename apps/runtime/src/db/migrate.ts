@@ -35,7 +35,7 @@ export const migrateSqlite = (db: Database.Database, directory: string): void =>
 
 export const migrationsReady = (
   db: Database.Database,
-  version = "0001_init",
+  version = "0002_execution",
 ): boolean => {
   const row = db
     .prepare("SELECT 1 FROM schema_migrations WHERE version = ?")
