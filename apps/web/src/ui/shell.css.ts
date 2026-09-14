@@ -23,7 +23,9 @@ export const skipLink = style({
 
 export const shell = style({
   minHeight: "100vh",
+  height: "100vh",
   display: "flex",
+  overflow: "hidden",
   backgroundColor: vars.color.bg,
   color: vars.color.text,
   "@media": {
@@ -131,11 +133,13 @@ export const stage = recipe({
       page: {
         padding: `${vars.space.xxl} 40px ${vars.space.xxl}`,
         gap: vars.space.xl,
+        overflow: "auto",
       },
       editor: {
-        padding: `${vars.space.lg} ${vars.space.xl}`,
-        gap: vars.space.md,
+        padding: 0,
+        gap: 0,
         minHeight: 0,
+        overflow: "hidden",
       },
     },
   },
@@ -149,5 +153,6 @@ export const main = style({
   flexDirection: "column",
   gap: "inherit",
   minWidth: 0,
+  minHeight: 0,
   flex: 1,
 });

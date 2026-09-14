@@ -125,6 +125,17 @@ describe.skipIf(!postgresUp)("flow draft and revision", () => {
         payload: {},
       });
       expect(rejected.statusCode).toBe(400);
+      await ctx.app.inject({
+        method: "PUT",
+        url: `/api/v1/sites/${siteId}/flows/${flowId}/draft`,
+        headers,
+        payload: {
+          expectedVersion: 3,
+          definition: definition(flowId),
+          triggers: draftBody.triggers,
+          connections: draftBody.connections,
+        },
+      });
     } finally {
       await closeApi(ctx);
     }

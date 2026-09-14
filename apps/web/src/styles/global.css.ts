@@ -5,6 +5,7 @@ import { globalStyle } from "@vanilla-extract/css";
 import { vars } from "./theme.css.js";
 
 globalStyle("html, body, #root", {
+  height: "100%",
   minHeight: "100%",
 });
 

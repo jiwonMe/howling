@@ -18,6 +18,7 @@ export const Bindings = (props: {
 }) => {
   const node = props.definition.nodes.find((item) => item.id === props.selectedId);
   const trigger = props.triggers[0];
+  const inputId = props.definition.nodes.find((item) => item.type === "core.input")?.id ?? "input";
   return (
     <aside className={sidebar}>
       <h2 className={cardTitle}>Trigger</h2>
@@ -40,7 +41,7 @@ export const Bindings = (props: {
         />
       </label>
       {node ? (
-        <NodeFields node={node} onNode={props.onNode} />
+        <NodeFields inputId={inputId} node={node} onNode={props.onNode} />
       ) : (
         <p>노드를 선택하세요.</p>
       )}
@@ -49,6 +50,7 @@ export const Bindings = (props: {
 };
 
 const NodeFields = (props: {
+  readonly inputId: string;
   readonly node: NodeInstance;
   readonly onNode: (node: NodeInstance) => void;
 }) => {
@@ -75,9 +77,9 @@ const NodeFields = (props: {
             onChange={(value) =>
               setInput("value", {
                 kind: "output",
-                nodeId: "input",
+                nodeId: props.inputId,
                 output: "value",
-                path: value,
+                path: value === "" ? "/power" : value,
               })
             }
           />
