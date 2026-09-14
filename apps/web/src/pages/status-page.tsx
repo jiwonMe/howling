@@ -1,19 +1,19 @@
 /**
- * 로그인 후 API·runtime 연결 상태를 보여 준다.
+ * 사이트 준비 상태와 최근 실행.
  */
-import type { RuntimeStatus } from "@howling/contracts";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { loginHref, logout, UnauthorizedError } from "../lib/api.js";
+import { loginHref, UnauthorizedError } from "../lib/api.js";
+import { haStatus, runtimeDetail, siteClaim } from "../lib/dashboard.js";
+import { listRuns, type RunRow } from "../lib/flows-api.js";
 import { loadStatus, type StatusSnapshot } from "../lib/status.js";
-import { themeClass } from "../styles/theme.css.js";
-import { buttonRecipe } from "../ui/button.css.js";
-import { card, cardDetail, cardTitle, cardValue } from "../ui/card.css.js";
-import { cardGrid, header, page, subtitle, title } from "../ui/layout.css.js";
+import { caption, header, lede, page, section, sectionTitle, title } from "../ui/layout.css.js";
+import { RunTable } from "../ui/run-table.js";
+import { stat, statDetail, statLabel, statStrip, statValue } from "../ui/stat.css.js";
 
 export const StatusPage = () => {
-  const [data, setData] = useState<StatusSnapshot | undefined>();
-  const [error, setError] = useState<string | undefined>();
+  const [data, setData] = useState<StatusSnapshot>();
+  const [runs, setRuns] = useState<readonly RunRow[]>([]);
+  const [error, setError] = useState<string>();
 
   useEffect(() => {
     let cancelled = false;
@@ -23,6 +23,10 @@ export const StatusPage = () => {
         if (!cancelled) {
           setData(next);
           setError(undefined);
+        }
+        const listed = await listRuns(next.site.id);
+        if (!cancelled) {
+          setRuns(listed.runs);
         }
       } catch (caught) {
         if (caught instanceof UnauthorizedError) {
@@ -46,105 +50,60 @@ export const StatusPage = () => {
 
   if (error && !data) {
     return (
-      <main className={`${themeClass} ${page({ tone: "error" })}`}>
+      <div className={page({ tone: "error" })}>
         <p>{error}</p>
-      </main>
+      </div>
     );
   }
 
   if (!data) {
     return (
-      <main className={`${themeClass} ${page({ tone: "muted" })}`}>
+      <div className={page({ tone: "muted" })}>
         <p>상태를 불러오는 중…</p>
-      </main>
+      </div>
     );
   }
 
+  const claim = siteClaim(data);
+  const ha = haStatus(data.runtime);
   return (
-    <main className={`${themeClass} ${page()}`}>
+    <div className={page()}>
       <header className={header}>
         <div>
           <h1 className={title}>Howling</h1>
-          <p className={subtitle}>
-            {data.user.email ?? data.user.id} · {data.site.name}
-          </p>
-        </div>
-        <div>
-          <Link className={buttonRecipe()} to="/connections">
-            연결
-          </Link>{" "}
-          <Link className={buttonRecipe()} to="/flows">
-            플로
-          </Link>{" "}
-          <button
-            type="button"
-            className={buttonRecipe()}
-            onClick={() => {
-              void logout(data.user.csrfToken).then(() => {
-                window.location.assign(loginHref);
-              });
-            }}
-          >
-            로그아웃
-          </button>
         </div>
       </header>
-      <section className={cardGrid}>
-        <StatusCard
-          title="API"
-          value={data.ready.status === "ready" ? "ready" : "not_ready"}
-          online={data.ready.status === "ready"}
-          detail={`health ${data.health.status} · db ${data.ready.checks.database ? "ok" : "down"}`}
-        />
-        <StatusCard
-          title="Runtime"
-          value={data.runtime.online ? "online" : "offline"}
-          online={data.runtime.online}
-          detail={runtimeDetail(data.runtime)}
-        />
-        <StatusCard
-          title="Home Assistant"
-          value={haLabel(data.runtime)}
-          online={haOnline(data.runtime)}
-          detail={haDetail(data.runtime)}
-        />
+      <p className={lede}>{claim.title}</p>
+      <p className={caption}>{claim.detail}</p>
+      <section className={statStrip()}>
+        <article className={stat}>
+          <p className={statLabel}>API</p>
+          <p className={statValue({ online: data.ready.status === "ready" })}>
+            {data.ready.status === "ready" ? "ready" : "not_ready"}
+          </p>
+          <p className={statDetail}>
+            health {data.health.status} · db {data.ready.checks.database ? "ok" : "down"}
+          </p>
+        </article>
+        <article className={stat}>
+          <p className={statLabel}>Runtime</p>
+          <p className={statValue({ online: data.runtime.online })}>
+            {data.runtime.online ? "online" : "offline"}
+          </p>
+          <p className={statDetail}>{runtimeDetail(data.runtime)}</p>
+        </article>
+        <article className={stat}>
+          <p className={statLabel}>Home Assistant</p>
+          <p className={statValue({ online: ha === "ready" })}>{ha}</p>
+          <p className={statDetail}>
+            {ha === "not_configured" ? "local setup only" : `HA ${ha}`}
+          </p>
+        </article>
       </section>
-    </main>
+      <section className={section}>
+        <h2 className={sectionTitle}>최근 실행</h2>
+        <RunTable runs={runs} />
+      </section>
+    </div>
   );
 };
-
-const runtimeDetail = (runtime: RuntimeStatus): string => {
-  const seen = runtime.lastSeenAt ?? "없음";
-  return `${runtime.runtimeId} · gen ${String(runtime.connectionGeneration)} · last ${seen}`;
-};
-
-const haLabel = (runtime: RuntimeStatus): string => {
-  if (!("ha" in runtime) || !runtime.ha || typeof runtime.ha !== "object") {
-    return "not_configured";
-  }
-  const ha = runtime.ha as { status?: string };
-  return ha.status ?? "not_configured";
-};
-
-const haOnline = (runtime: RuntimeStatus): boolean => haLabel(runtime) === "ready";
-
-const haDetail = (runtime: RuntimeStatus): string => {
-  const status = haLabel(runtime);
-  if (status === "not_configured") {
-    return "로컬 setup에서 HA를 연결한다.";
-  }
-  return `HA ${status}`;
-};
-
-const StatusCard = (props: {
-  readonly title: string;
-  readonly value: string;
-  readonly online: boolean;
-  readonly detail: string;
-}) => (
-  <article className={card}>
-    <h2 className={cardTitle}>{props.title}</h2>
-    <p className={cardValue({ online: props.online })}>{props.value}</p>
-    <p className={cardDetail}>{props.detail}</p>
-  </article>
-);

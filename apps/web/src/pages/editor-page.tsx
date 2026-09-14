@@ -21,8 +21,9 @@ import {
 } from "../lib/flows-api.js";
 import { addNode, emptyDefinition, replaceNode } from "../lib/flow-model.js";
 import { loadStatus } from "../lib/status.js";
-import { themeClass } from "../styles/theme.css.js";
 import { buttonRecipe } from "../ui/button.css.js";
+import { iconMark } from "../ui/icon.css.js";
+import { ArrowLeftOutline18 } from "../ui/icons/index.js";
 import { editorShell, muted, toolbar } from "../ui/editor.css.js";
 import { errorText } from "../ui/form.css.js";
 import { header, page, subtitle, title } from "../ui/layout.css.js";
@@ -67,9 +68,9 @@ export const EditorPage = () => {
 
   if (!siteId || !csrf || !flowId || !definition || !detail) {
     return (
-      <main className={`${themeClass} ${page({ tone: "muted" })}`}>
+      <div className={page({ tone: "muted" })}>
         <p>편집기를 불러오는 중…</p>
-      </main>
+      </div>
     );
   }
 
@@ -91,7 +92,7 @@ export const EditorPage = () => {
   };
 
   return (
-    <main className={`${themeClass} ${page()}`}>
+    <div className={page()}>
       <header className={header}>
         <div>
           <h1 className={title}>{detail.name}</h1>
@@ -100,6 +101,7 @@ export const EditorPage = () => {
           </p>
         </div>
         <Link className={buttonRecipe()} to="/flows">
+          <ArrowLeftOutline18 aria-hidden className={iconMark} />
           목록
         </Link>
       </header>
@@ -199,7 +201,7 @@ export const EditorPage = () => {
           onNode={(node: NodeInstance) => setDefinition(replaceNode(definition, node.id, node))}
         />
       </div>
-    </main>
+    </div>
   );
 };
 

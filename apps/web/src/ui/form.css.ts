@@ -1,5 +1,5 @@
 /**
- * 입력·폼.
+ * 입력. 라벨은 필드 밖, 테두리는 필드만.
  */
 import { style } from "@vanilla-extract/css";
 import { vars } from "../styles/theme.css.js";
@@ -18,7 +18,7 @@ export const label = style({
 export const input = style({
   borderRadius: vars.radius.md,
   border: `1px solid ${vars.color.borderStrong}`,
-  backgroundColor: vars.color.hover,
+  backgroundColor: vars.color.bg,
   color: vars.color.text,
   padding: `${vars.space.sm} ${vars.space.md}`,
 });
