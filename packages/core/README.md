@@ -2,6 +2,8 @@
 
 Howling 실행 커널입니다. 플로 정의를 검증하고, 노드를 단계적으로 평가하며, 외부 작업은 intent로만 남깁니다. Home Assistant, MCP, React, 데이터베이스에 의존하지 않습니다.
 
+자습서: [`docs/README.md`](../../docs/README.md) — 개념부터 dry-run·커스텀 노드까지 순서대로 있습니다.
+
 ## 설치
 
 워크스페이스 루트에서 `pnpm install` 후 `pnpm --filter @howling/core test`를 실행합니다.
