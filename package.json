@@ -3,9 +3,16 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.15.0",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "build": "pnpm --filter @howling/core build",
-    "test": "pnpm --filter @howling/core test",
-    "typecheck": "pnpm --filter @howling/core typecheck"
+    "dev": "node ./scripts/dev.mjs",
+    "dev:deps": "docker compose -f infra/compose/compose.yaml up -d postgres oidc",
+    "build": "pnpm -r --if-present --filter './packages/*' --filter './apps/*' --filter './infra/oidc' build",
+    "typecheck": "pnpm --filter @howling/core --filter @howling/contracts build && pnpm -r --if-present --filter './packages/*' --filter './apps/*' --filter './infra/oidc' typecheck",
+    "test": "pnpm --filter @howling/core --filter @howling/contracts build && pnpm -r --if-present --filter './packages/*' --filter './apps/*' --filter './infra/oidc' test",
+    "verify:phase0": "node ./scripts/verify-phase0.mjs",
+    "test:e2e": "node -e \"console.log('Playwright E2E는 단계 2부터 구현한다')\""
   }
 }

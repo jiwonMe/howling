@@ -1,0 +1,55 @@
+name: howling
+
+services:
+  postgres:
+    image: postgres:16.6-alpine
+    environment:
+      POSTGRES_USER: howling
+      POSTGRES_PASSWORD: howling
+      POSTGRES_DB: howling
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U howling -d howling"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  oidc:
+    build:
+      context: ../..
+      dockerfile: infra/oidc/Dockerfile
+    environment:
+      OIDC_ISSUER: http://127.0.0.1:8081
+      OIDC_LISTEN: "0.0.0.0:8081"
+      OIDC_CLIENT_ID: howling-web
+      OIDC_CLIENT_SECRET: howling-dev-secret
+      OIDC_REDIRECT_URI: http://127.0.0.1:5173/api/v1/auth/callback
+      OIDC_REDIRECT_URIS: http://127.0.0.1:3000/api/v1/auth/callback
+      OIDC_TEST_EMAIL: owner@howling.test
+      OIDC_TEST_PASSWORD: howling-dev
+    ports:
+      - "8081:8081"
+
+  home-assistant:
+    profiles: ["e2e"]
+    image: alpine:3.20
+    command: ["true"]
+    restart: "no"
+
+  mcp:
+    profiles: ["e2e"]
+    image: alpine:3.20
+    command: ["true"]
+    restart: "no"
+
+  tls-gateway:
+    profiles: ["e2e"]
+    image: alpine:3.20
+    command: ["true"]
+    restart: "no"
+
+volumes:
+  postgres_data:

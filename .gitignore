@@ -5,3 +5,8 @@ coverage
 *.log
 .turbo
 .vitest
+.env
+*.sqlite
+*.db
+apps/runtime/data
+

@@ -1,2 +1,8 @@
 packages:
+  - apps/*
   - packages/*
+  - infra/oidc
+
+onlyBuiltDependencies:
+  - better-sqlite3
+

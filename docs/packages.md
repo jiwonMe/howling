@@ -1,20 +1,27 @@
 # 패키지 지도
 
-Howling은 pnpm 워크스페이스입니다. 첫 구현은 패키지를 하나만 둡니다. 폴더마다 npm 패키지를 쪼개지 않습니다.
+Howling은 pnpm 워크스페이스입니다. Core는 독립 실행 엔진이고, 제품 앱은 같은 저장소에서 개발합니다.
 
-## 현재 패키지
+## 현재 패키지와 앱
 
 | 이름 | 경로 | 역할 |
 | --- | --- | --- |
 | `howling` (private root) | `/` | 워크스페이스 스크립트. 앱이 아니다. |
 | `@howling/core` | [`packages/core`](../packages/core) | 플로 compile, 단계 실행, effect intent, dry-run |
+| `@howling/contracts` | [`packages/contracts`](../packages/contracts) | REST DTO, runtime protocol, 제품 flow 타입 |
+| `@howling/web` | [`apps/web`](../apps/web) | React 상태 화면. 편집기는 아직 없다. |
+| `@howling/api` | [`apps/api`](../apps/api) | Fastify, 세션, runtime WebSocket 게이트웨이 |
+| `@howling/runtime` | [`apps/runtime`](../apps/runtime) | 로컬 health와 API 연결. 실행 루프는 단계 1. |
+| `@howling/oidc-test` | [`infra/oidc`](../infra/oidc) | 개발·테스트 전용 OIDC issuer |
 
-루트 스크립트는 core로 위임합니다.
+루트 명령:
 
 ```bash
-pnpm test        # @howling/core 테스트
-pnpm typecheck   # @howling/core 타입 검사
-pnpm build       # @howling/core tsc
+pnpm dev          # postgres·oidc 후 세 앱
+pnpm test         # 단위·계약·integration
+pnpm typecheck    # 전체 타입 검사
+pnpm build        # shared packages와 세 앱
+pnpm verify:phase0
 ```
 
 ## `@howling/core` 안 구조
@@ -50,17 +57,12 @@ Host(편집기, HA, MCP)는 `src/index.ts`가 내보내는 것만 보면 됩니�
 
 실행 결과는 호출자가 넣은 `runId`, 논리 시간, 입력, 초기 상태, 외부 응답으로만 정해집니다.
 
-## 앞으로 붙을 패키지 (아직 없음)
+## 제품 패키지 경계
 
-설계상 Host는 Core의 `compile` 진단, `Transition.events`, `EffectRequest`만 보면 됩니다.
+- `contracts`는 browser-safe다. React·DB·HTTP 클라이언트를 넣지 않는다.
+- `connectors`는 아직 없다. web dependency graph로 가져오지 않는다.
+- Runtime은 `@howling/core`를 선언만 하고, 단계 0에서는 engine을 돌리지 않는다.
 
-| 예정 | Core에 연결하는 위치 |
-| --- | --- |
-| React Flow 편집기 | `WorkflowDefinition` 생성, compile 진단 표시, 이벤트 표시 |
-| HA adapter | HA 이벤트를 run 입력으로, external effect 수행 |
-| MCP client/server | 도구를 노드로, 같은 compile·run·snapshot |
-| 로컬 runner | 실제 clock, trigger, 영속 state, outbox |
-
-이 문서의 나머지 장은 전부 `@howling/core` 자습서입니다.
+이 문서의 나머지 장은 `@howling/core` 자습서입니다.
 
 다음: [Core가 하는 일](./core/01-overview.md)
