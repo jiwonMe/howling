@@ -45,7 +45,7 @@ export const migratePostgres = async (
 
 export const migrationsReady = async (
   pool: pg.Pool,
-  version = "0001_init",
+  version = "0002_flows",
 ): Promise<boolean> => {
   try {
     const result = await pool.query(

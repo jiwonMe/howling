@@ -1088,7 +1088,9 @@ Fixture 편집·step·continue, replay session, summary SSE·cursor, cloud offli
 ## 24. 참고 문서
 
 - [Howling core 계획](./core-plan.md)
+- [Howling 문서 입구](../docs/README.md)
 - [Howling 현재 패키지 지도](../docs/packages.md)
+- [제품 개요](../docs/product/01-overview.md)
 - [Howling snapshot·host 경계](../docs/core/10-snapshot-and-host.md)
 - [Howling 실행 계약](../packages/core/src/contracts/engine.ts)
 - [Howling event 계약](../packages/core/src/contracts/event.ts)

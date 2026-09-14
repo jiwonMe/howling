@@ -1,0 +1,11 @@
+.git
+**/.git
+**/node_modules
+apps/runtime/data
+**/*.sqlite
+**/*.log
+e2e/test-results
+e2e/playwright-report
+infra/tls/generated/*.key
+infra/tls/generated/*.csr
+infra/tls/generated/*.srl

@@ -21,9 +21,37 @@ export {
 export type { CurrentUser, Permission, SiteList, SiteSummary } from "./auth.js";
 export {
   haConnectionPlaceholderSchema,
+  haConnectionSchema,
+  haStatusSchema,
   runtimeStatusSchema,
 } from "./runtime-status.js";
-export type { RuntimeStatus } from "./runtime-status.js";
+export type { HaStatus, RuntimeStatus } from "./runtime-status.js";
+export {
+  pairingClaimRequestSchema,
+  pairingClaimResponseSchema,
+  pairingCompleteResponseSchema,
+  pairingCreateResponseSchema,
+} from "./pairing.js";
+export type {
+  PairingCompleteResponse,
+  PairingCreateResponse,
+} from "./pairing.js";
+export { NODE_CATALOG_VERSION, officialCatalog } from "./catalog.js";
+export type { CatalogNode } from "./catalog.js";
+export {
+  draftSaveSchema,
+  editorSaveSchema,
+  runSummarySchema,
+  startRunRequestSchema,
+} from "./flow-api.js";
+export type { DraftSave, EditorSave, RunSummary } from "./flow-api.js";
+export {
+  activationResultSchema,
+  connectionsSnapshotSchema,
+  desiredDeploymentSchema,
+  runStartPayloadSchema,
+  runSummaryPayloadSchema,
+} from "./runtime/control.js";
 export {
   parseRuntimeEnvelope,
   runtimeEnvelopeSchema,

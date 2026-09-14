@@ -1,0 +1,158 @@
+# 편집기와 실행
+
+편집기는 공식 catalog 네 노드만 캔버스에 올립니다. undo/redo와 그룹은 없습니다. 서버 초안과 캔버스 좌표는 따로 저장합니다. 좌표만 바꾸면 artifact digest가 바뀌지 않습니다.
+
+## 화면 배치
+
+- 왼쪽: Input, Rolling mean, Condition, Effect
+- 가운데: React Flow. 노드를 추가하면 이전 노드와 자동으로 이어집니다. Condition은 `true` 포트
+- 오른쪽: HA trigger entity, 선택 노드 binding
+- 위: 저장, 검증, Revision, 배포
+
+## 전력 평균 플로를 만드는 예
+
+1. `/flows`에서 **새 플로**를 누른다. 이름이 `Power alert`로 만들어진다.
+2. 팔레트에서 Input → Rolling mean → Condition → Effect 순으로 추가한다.
+3. Trigger HA entity에 `input_number.test_power`를 넣는다. `inputKey`는 `power`다.
+4. mean 노드: `windowSize` `5`, value path `/power`.
+5. condition 노드: operator는 기본 `gt`, right `1000`. left는 mean의 `mean` 출력.
+6. effect 노드: domain `input_boolean`, service `turn_on`, entity_id `input_boolean.test_alert`. adapter는 `homeassistant` / `call_service`.
+
+저장 뒤에 **검증**이 `검증 통과`여야 합니다. **배포**는 저장 → revision → desired.deployment를 한 번에 보냅니다. 헤더가 `배포 active`가 될 때까지 기다립니다.
+
+## API
+
+모두 `/api/v1/sites/:siteId` 아래입니다. 쿠키 세션과 `x-csrf-token`이 필요합니다. 웹과 이후 MCP가 같은 application service를 부릅니다.
+
+| 경로 | 동작 |
+| --- | --- |
+| `GET/POST /flows` | 목록·생성 |
+| `GET /flows/:flowId` | 초안 + 배포 상태 |
+| `PUT .../draft`, `PUT .../editor` | 기대 `version`. 충돌이면 409 |
+| `POST .../validate` | 공식 catalog + core compile |
+| `POST .../revisions` | 불변 artifact + digest |
+| `POST .../deployments` | generation++, desired 전송, HTTP 202 |
+| `GET /deployments/:id` | requested / validating / staged / active / failed |
+| `GET /connections`, `GET /catalog` | runtime이 보고한 metadata |
+| `POST /flows/:id/runs` | 배포된 revision 수동 실행, idempotency key |
+| `GET /runs`, `GET /runs/:id` | 요약. 원본 payload 없음 |
+
+로그인된 세션으로 목록을 보는 예:
+
+```bash
+SITE_ID=site_dev
+COOKIE='howling_session=...'
+
+curl -sS -H "cookie: ${COOKIE}" \
+  "http://127.0.0.1:5173/api/v1/sites/${SITE_ID}/flows"
+
+curl -sS -H "cookie: ${COOKIE}" \
+  "http://127.0.0.1:5173/api/v1/sites/${SITE_ID}/runs"
+```
+
+초안 저장 몸통 예:
+
+```json
+{
+  "expectedVersion": 1,
+  "definition": {
+    "schemaVersion": 1,
+    "id": "FLOW_ID",
+    "revision": "draft",
+    "entryNodeId": "input",
+    "nodes": [
+      {
+        "id": "input",
+        "type": "core.input",
+        "version": 1,
+        "config": {},
+        "inputs": {}
+      },
+      {
+        "id": "mean",
+        "type": "analysis.rolling-mean",
+        "version": 1,
+        "config": { "windowSize": 5 },
+        "inputs": {
+          "value": {
+            "kind": "output",
+            "nodeId": "input",
+            "output": "value",
+            "path": "/power"
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-input-mean",
+        "source": { "nodeId": "input", "port": "success" },
+        "target": { "nodeId": "mean", "port": "in" }
+      }
+    ]
+  },
+  "triggers": [
+    {
+      "id": "ha-power",
+      "kind": "ha.state_changed",
+      "connectionId": "ha",
+      "config": { "entityId": "input_number.test_power", "inputKey": "power" }
+    }
+  ],
+  "connections": [{ "id": "ha", "kind": "ha", "connectionId": "ha" }]
+}
+```
+
+HA trigger가 있으면 connections에 `kind: "ha"`가 있어야 배포가 됩니다. catalog version은 `2026.09.1`입니다.
+
+## Runtime이 받는 배포
+
+WSS 이름(예약 그대로):
+
+| 방향 | type |
+| --- | --- |
+| API → runtime | `desired.deployment`, `run.start` |
+| runtime → API | `hello`, `heartbeat`, `activation.result`, `run.summary`, `connections.snapshot` |
+
+Runtime은 digest·노드 버전·HA connection binding을 검사한 뒤 `revision_artifacts`를 upsert합니다. 활성 포인터는 한 SQLite 트랜잭션입니다. 실패하면 이전 활성 revision을 유지합니다.
+
+같은 site에 새 pairing이 오면 API hub는 이전 소켓을 버리고 OPEN 소켓으로만 `desired.deployment`를 보냅니다.
+
+## 실행 상세
+
+`/runs/:runId`는 5초마다 `GET /runs/:runId`를 다시 부릅니다. Summary SSE는 단계 3입니다.
+
+화면에 남는 것:
+
+- `runId`, revision, status, lastSeq
+- trigger 입력 (원본 HA payload는 없음)
+- 노드/edge 이벤트. 대기·오류·unknown
+- HA 서비스 응답과 entity 관측은 다른 사건
+
+단계 1에서 시드한 `power-alert` / `delay-effect` artifact는 HA trigger가 없습니다. 로컬 `POST /v1/runs`용입니다. 제품 완료 판정에 이 시드를 배포만 해서 통과시키지 않습니다.
+
+## 로컬에서 run을 직접 시작
+
+배포된 revision이 있고 runtime이 온라인일 때:
+
+```bash
+SITE_ID=site_dev
+FLOW_ID='........-....-....-....-............'
+CSRF='csrf-from-auth-me'
+COOKIE='howling_session=...; howling_csrf=...'
+
+curl -sS -X POST \
+  -H "content-type: application/json" \
+  -H "x-csrf-token: ${CSRF}" \
+  -H "cookie: ${COOKIE}" \
+  --data '{
+    "input": { "power": 1400 },
+    "mode": "auto",
+    "idempotencyKey": "manual-1400"
+  }' \
+  "http://127.0.0.1:5173/api/v1/sites/${SITE_ID}/flows/${FLOW_ID}/runs"
+```
+
+202 뒤 `/flows`의 최근 실행 또는 `GET /runs`로 `runId`를 받아 `/runs/:runId`를 엽니다.
+
+다음: [E2E](./05-e2e.md)

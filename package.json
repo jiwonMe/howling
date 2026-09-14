@@ -13,6 +13,6 @@
     "typecheck": "pnpm --filter @howling/core --filter @howling/contracts build && pnpm -r --if-present --filter './packages/*' --filter './apps/*' --filter './infra/oidc' typecheck",
     "test": "pnpm --filter @howling/core --filter @howling/contracts build && pnpm -r --if-present --filter './packages/*' --filter './apps/*' --filter './infra/oidc' test",
     "verify:phase0": "node ./scripts/verify-phase0.mjs",
-    "test:e2e": "node -e \"console.log('Playwright E2E는 단계 2부터 구현한다')\""
+    "test:e2e": "node ./scripts/test-e2e.mjs"
   }
 }

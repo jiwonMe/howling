@@ -36,7 +36,7 @@ export const markRuntimeHello = async (
      SET online = TRUE,
          connection_generation = $2,
          last_seen_at = now(),
-         capabilities = $3::jsonb
+         capabilities = COALESCE(capabilities, '{}'::jsonb) || $3::jsonb
      WHERE runtime_id = $1`,
     [input.runtimeId, input.generation, JSON.stringify(input.capabilities)],
   );

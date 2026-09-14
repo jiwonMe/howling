@@ -21,7 +21,7 @@ export const helloEnvelope = (input: {
   type: "hello",
   payload: {
     protocolVersion: 1,
-    capabilities: { connectors: [] },
+    capabilities: { connectors: ["homeassistant"] },
   },
 });
 

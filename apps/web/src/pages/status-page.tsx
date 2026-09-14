@@ -3,9 +3,13 @@
  */
 import type { RuntimeStatus } from "@howling/contracts";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { loginHref, logout, UnauthorizedError } from "../lib/api.js";
-import { cn } from "../lib/cn.js";
 import { loadStatus, type StatusSnapshot } from "../lib/status.js";
+import { themeClass } from "../styles/theme.css.js";
+import { buttonRecipe } from "../ui/button.css.js";
+import { card, cardDetail, cardTitle, cardValue } from "../ui/card.css.js";
+import { cardGrid, header, page, subtitle, title } from "../ui/layout.css.js";
 
 export const StatusPage = () => {
   const [data, setData] = useState<StatusSnapshot | undefined>();
@@ -42,7 +46,7 @@ export const StatusPage = () => {
 
   if (error && !data) {
     return (
-      <main className={cn(/* 오류 화면 */ "min-h-screen bg-zinc-950 p-8 text-red-300")}>
+      <main className={`${themeClass} ${page({ tone: "error" })}`}>
         <p>{error}</p>
       </main>
     );
@@ -50,56 +54,42 @@ export const StatusPage = () => {
 
   if (!data) {
     return (
-      <main className={cn(/* 로딩 화면 */ "min-h-screen bg-zinc-950 p-8 text-zinc-400")}>
+      <main className={`${themeClass} ${page({ tone: "muted" })}`}>
         <p>상태를 불러오는 중…</p>
       </main>
     );
   }
 
   return (
-    <main
-      className={cn(
-        /* 페이지 배경 */
-        "min-h-screen bg-zinc-950 text-zinc-100",
-        /* 여백 */
-        "p-8",
-      )}
-    >
-      <header
-        className={cn(
-          /* 헤더 정렬 */
-          "mb-8 flex items-center justify-between",
-        )}
-      >
+    <main className={`${themeClass} ${page()}`}>
+      <header className={header}>
         <div>
-          <h1 className={cn(/* 제목 */ "text-2xl font-semibold")}>Howling</h1>
-          <p className={cn(/* 부제 */ "text-sm text-zinc-400")}>
+          <h1 className={title}>Howling</h1>
+          <p className={subtitle}>
             {data.user.email ?? data.user.id} · {data.site.name}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            void logout(data.user.csrfToken).then(() => {
-              window.location.assign(loginHref);
-            });
-          }}
-          className={cn(
-            /* 로그아웃 버튼 */
-            "rounded-md border border-zinc-700 px-3 py-1.5 text-sm",
-            /* hover */
-            "hover:bg-zinc-900",
-          )}
-        >
-          로그아웃
-        </button>
+        <div>
+          <Link className={buttonRecipe()} to="/connections">
+            연결
+          </Link>{" "}
+          <Link className={buttonRecipe()} to="/flows">
+            플로
+          </Link>{" "}
+          <button
+            type="button"
+            className={buttonRecipe()}
+            onClick={() => {
+              void logout(data.user.csrfToken).then(() => {
+                window.location.assign(loginHref);
+              });
+            }}
+          >
+            로그아웃
+          </button>
+        </div>
       </header>
-      <section
-        className={cn(
-          /* 카드 그리드 */
-          "grid gap-4 md:grid-cols-2",
-        )}
-      >
+      <section className={cardGrid}>
         <StatusCard
           title="API"
           value={data.ready.status === "ready" ? "ready" : "not_ready"}
@@ -114,9 +104,9 @@ export const StatusPage = () => {
         />
         <StatusCard
           title="Home Assistant"
-          value="not_configured"
-          online={false}
-          detail="단계 2에서 연결한다."
+          value={haLabel(data.runtime)}
+          online={haOnline(data.runtime)}
+          detail={haDetail(data.runtime)}
         />
       </section>
     </main>
@@ -128,33 +118,33 @@ const runtimeDetail = (runtime: RuntimeStatus): string => {
   return `${runtime.runtimeId} · gen ${String(runtime.connectionGeneration)} · last ${seen}`;
 };
 
+const haLabel = (runtime: RuntimeStatus): string => {
+  if (!("ha" in runtime) || !runtime.ha || typeof runtime.ha !== "object") {
+    return "not_configured";
+  }
+  const ha = runtime.ha as { status?: string };
+  return ha.status ?? "not_configured";
+};
+
+const haOnline = (runtime: RuntimeStatus): boolean => haLabel(runtime) === "ready";
+
+const haDetail = (runtime: RuntimeStatus): string => {
+  const status = haLabel(runtime);
+  if (status === "not_configured") {
+    return "로컬 setup에서 HA를 연결한다.";
+  }
+  return `HA ${status}`;
+};
+
 const StatusCard = (props: {
   readonly title: string;
   readonly value: string;
   readonly online: boolean;
   readonly detail: string;
 }) => (
-  <article
-    className={cn(
-      /* 상태 카드 골격 */
-      "rounded-xl border border-zinc-800 bg-zinc-950 p-6",
-      /* 카드 간격 */
-      "flex flex-col gap-3",
-    )}
-  >
-    <h2 className={cn(/* 카드 제목 */ "text-sm uppercase tracking-wide text-zinc-500")}>
-      {props.title}
-    </h2>
-    <p
-      className={cn(
-        /* runtime 온라인 강조 */
-        props.online ? "text-emerald-400" : "text-zinc-400",
-        /* 값 크기 */
-        "text-xl font-medium",
-      )}
-    >
-      {props.value}
-    </p>
-    <p className={cn(/* 부가 정보 */ "text-sm text-zinc-500")}>{props.detail}</p>
+  <article className={card}>
+    <h2 className={cardTitle}>{props.title}</h2>
+    <p className={cardValue({ online: props.online })}>{props.value}</p>
+    <p className={cardDetail}>{props.detail}</p>
   </article>
 );

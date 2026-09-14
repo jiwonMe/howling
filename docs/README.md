@@ -1,23 +1,36 @@
 # Howling 문서
 
-Howling은 Home Assistant를 이용한 시각적 자동화 플랫폼입니다. 편집기, 로컬 runner, 클라우드, MCP는 뒤에 붙고, 지금은 그 공통 실행 엔진인 `@howling/core`만 있습니다.
+Howling은 Home Assistant를 이용한 시각적 자동화 플랫폼입니다. 웹에서 플로를 만들고, 로컬 runtime이 실제 장치를 움직이며, 같은 실행이 화면으로 돌아옵니다.
 
-이 폴더는 **자습서**입니다. 위에서 아래로 읽으면 플로를 정의하고, 컴파일하고, 한 칸씩 실행하고, 외부 작업을 fixture로 재현할 수 있습니다. 설계 원문은 [`plan/core-plan.md`](../plan/core-plan.md)입니다.
+문서는 두 갈래입니다.
 
-## 학습 순서
+- **제품** — 로그인부터 pairing, 편집기, 배포, HA, E2E까지 지금 돌아가는 앱
+- **Core** — `@howling/core` 실행 엔진. HA 없이 JSON과 fixture로 검증
 
-1. [패키지 지도](./packages.md) — 저장소와 패키지 경계
-2. [Core가 하는 일](./core/01-overview.md) — 포함·제외, 공개 API
-3. [핵심 개념](./core/02-concepts.md) — 정의, 연결, 값 참조, run
-4. [첫 플로](./core/03-first-flow.md) — 복사해 실행하는 최소 예제
-5. [Compile과 진단](./core/04-compile.md) — 잘못된 그래프를 고치는 방법
-6. [step과 run](./core/05-step-and-run.md) — 단계 실행과 자동 실행
-7. [공식 노드](./core/06-nodes.md) — input, map, condition, 분석
-8. [분기와 합류](./core/07-branch-and-join.md) — 조건, ALL, ANY, 오류 경로
-9. [Effect와 시간](./core/08-effects-and-time.md) — 외부 작업, timer, command
-10. [Dry run](./core/09-dry-run.md) — fixture로 알림·조회를 재현
-11. [Snapshot과 Host](./core/10-snapshot-and-host.md) — 저장, 복원, 전달 책임
-12. [노드를 직접 등록](./core/11-custom-nodes.md) — registry에 새 타입 추가
+설계 원문은 [`plan/product-plan.md`](../plan/product-plan.md)와 [`plan/core-plan.md`](../plan/core-plan.md)입니다.
+
+## 제품
+
+1. [패키지 지도](./packages.md) — 워크스페이스와 의존 경계
+2. [제품 개요](./product/01-overview.md) — 구성, 완료 조건, 아직 없는 것
+3. [로컬 개발](./product/02-local-dev.md) — `pnpm dev`, 계정, 포트
+4. [Pairing과 HA](./product/03-pairing-and-ha.md) — 로컬 setup, secret, 준비 상태
+5. [편집기와 실행](./product/04-editor-and-runs.md) — 초안, revision, 배포, run
+6. [E2E](./product/05-e2e.md) — `howling.test`, 테스트 CA, 전력 평균 시나리오
+
+## Core 자습서
+
+1. [Core가 하는 일](./core/01-overview.md)
+2. [핵심 개념](./core/02-concepts.md)
+3. [첫 플로](./core/03-first-flow.md)
+4. [Compile과 진단](./core/04-compile.md)
+5. [step과 run](./core/05-step-and-run.md)
+6. [공식 노드](./core/06-nodes.md)
+7. [분기와 합류](./core/07-branch-and-join.md)
+8. [Effect와 시간](./core/08-effects-and-time.md)
+9. [Dry run](./core/09-dry-run.md)
+10. [Snapshot과 Host](./core/10-snapshot-and-host.md)
+11. [노드를 직접 등록](./core/11-custom-nodes.md)
 
 ## 바로 실행
 
@@ -28,11 +41,21 @@ pnpm typecheck
 pnpm build
 ```
 
-브라우저에서 core를 불러보려면 `file://`가 아니라 HTTP를 씁니다.
+로컬 앱:
+
+```bash
+cp .env.example .env
+docker compose -f infra/compose/compose.yaml up -d postgres oidc
+pnpm dev
+```
+
+브라우저에서 `http://127.0.0.1:5173` — `owner@howling.test` / `howling-dev`.
+
+Core만 브라우저에서 보려면 `file://`가 아니라 HTTP를 씁니다.
 
 ```bash
 pnpm --filter @howling/core build
 pnpm --filter @howling/core smoke:browser
 ```
 
-브라우저에서 `http://127.0.0.1:4173/examples/browser-smoke.html` 을 엽니다.
+`http://127.0.0.1:4173/examples/browser-smoke.html` 을 엽니다.

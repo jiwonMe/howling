@@ -1,0 +1,189 @@
+name: howling-e2e
+
+services:
+  postgres:
+    image: postgres:16.6-alpine
+    environment:
+      POSTGRES_USER: howling
+      POSTGRES_PASSWORD: howling
+      POSTGRES_DB: howling
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U howling -d howling"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  oidc:
+    build:
+      context: ../..
+      dockerfile: infra/oidc/Dockerfile
+    environment:
+      OIDC_ISSUER: https://auth.howling.test
+      OIDC_LISTEN: "0.0.0.0:8081"
+      OIDC_CLIENT_ID: howling-web
+      OIDC_CLIENT_SECRET: howling-dev-secret
+      OIDC_REDIRECT_URI: https://howling.test/api/v1/auth/callback
+      OIDC_TEST_EMAIL: owner@howling.test
+      OIDC_TEST_PASSWORD: howling-dev
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8081/health').then((r)=>process.exit(r.ok?0:1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  home-assistant:
+    image: ghcr.io/home-assistant/home-assistant:2025.8.3
+    volumes:
+      - ha_config:/config
+      - ../e2e/ha/configuration.yaml:/config/configuration.yaml:ro
+    environment:
+      TZ: UTC
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8123/api/onboarding')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 40s
+
+  ha-control:
+    build:
+      context: ../e2e/ha-bootstrap
+    environment:
+      HA_URL: http://home-assistant:8123
+      SECRET_DIR: /secrets
+      RUNTIME_HOOKS: http://runtime:4000/v1/test/hooks
+    volumes:
+      - runtime_secrets:/secrets
+    depends_on:
+      home-assistant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8090/ready').then((r)=>process.exit(r.ok?0:1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/e2e/Dockerfile.apps
+      target: api
+    environment:
+      API_HOST: 0.0.0.0
+      API_PORT: "3000"
+      DATABASE_URL: postgres://howling:howling@postgres:5432/howling
+      PUBLIC_ORIGIN: https://howling.test
+      OIDC_ISSUER: https://auth.howling.test
+      OIDC_CLIENT_ID: howling-web
+      OIDC_CLIENT_SECRET: howling-dev-secret
+      OIDC_REDIRECT_URI: https://howling.test/api/v1/auth/callback
+      COOKIE_SECURE: "true"
+      BOOTSTRAP_SITE_ID: site_dev
+      BOOTSTRAP_SITE_NAME: Dev Site
+      BOOTSTRAP_RUNTIME_ID: runtime_dev
+      BOOTSTRAP_RUNTIME_TOKEN: ""
+      NODE_EXTRA_CA_CERTS: /certs/ca.crt
+    volumes:
+      - ../tls/generated/ca.crt:/certs/ca.crt:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      oidc:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/e2e/Dockerfile.apps
+      target: web
+    depends_on:
+      api:
+        condition: service_healthy
+
+  runtime:
+    build:
+      context: ../..
+      dockerfile: infra/e2e/Dockerfile.apps
+      target: runtime
+    environment:
+      RUNTIME_HOST: 0.0.0.0
+      RUNTIME_PORT: "4000"
+      RUNTIME_ID: runtime_dev
+      RUNTIME_SITE_ID: site_dev
+      RUNTIME_API_URL: wss://howling.test/api/v1/runtime/ws
+      RUNTIME_API_HTTP: https://howling.test
+      RUNTIME_TOKEN: ""
+      BOOTSTRAP_RUNTIME_TOKEN: ""
+      RUNTIME_SQLITE_PATH: /data/runtime.sqlite
+      RUNTIME_SECRET_ROOT: /data
+      RUNTIME_TEST_HOOKS: "1"
+      NODE_EXTRA_CA_CERTS: /certs/ca.crt
+    volumes:
+      - runtime_data:/data
+      - runtime_secrets:/data/secrets
+      - ../tls/generated/ca.crt:/certs/ca.crt:ro
+    depends_on:
+      api:
+        condition: service_healthy
+      ha-control:
+        condition: service_healthy
+      tls-gateway:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  tls-gateway:
+    image: caddy:2.9-alpine
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../tls/generated:/certs:ro
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_started
+      oidc:
+        condition: service_healthy
+    networks:
+      default:
+        aliases:
+          - howling.test
+          - auth.howling.test
+
+  playwright:
+    build:
+      context: ../..
+      dockerfile: infra/e2e/Dockerfile.playwright
+    depends_on:
+      tls-gateway:
+        condition: service_started
+      runtime:
+        condition: service_healthy
+      ha-control:
+        condition: service_healthy
+    environment:
+      NODE_EXTRA_CA_CERTS: /etc/ssl/certs/ca-certificates.crt
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+      HOWLING_CA: /certs/ca.crt
+    volumes:
+      - ../tls/generated/ca.crt:/certs/ca.crt:ro
+
+volumes:
+  postgres_data:
+  ha_config:
+  runtime_data:
+  runtime_secrets:

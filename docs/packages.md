@@ -2,31 +2,32 @@
 
 Howling은 pnpm 워크스페이스입니다. Core는 독립 실행 엔진이고, 제품 앱은 같은 저장소에서 개발합니다.
 
-## 현재 패키지와 앱
+## 패키지와 앱
 
 | 이름 | 경로 | 역할 |
 | --- | --- | --- |
 | `howling` (private root) | `/` | 워크스페이스 스크립트. 앱이 아니다. |
 | `@howling/core` | [`packages/core`](../packages/core) | 플로 compile, 단계 실행, effect intent, dry-run |
-| `@howling/contracts` | [`packages/contracts`](../packages/contracts) | REST DTO, runtime protocol, 제품 flow 타입 |
-| `@howling/web` | [`apps/web`](../apps/web) | React 상태 화면. 편집기는 아직 없다. |
-| `@howling/api` | [`apps/api`](../apps/api) | Fastify, 세션, runtime WebSocket 게이트웨이 |
-| `@howling/runtime` | [`apps/runtime`](../apps/runtime) | 로컬 health와 API 연결. 실행 루프는 단계 1. |
-| `@howling/oidc-test` | [`infra/oidc`](../infra/oidc) | 개발·테스트 전용 OIDC issuer |
+| `@howling/contracts` | [`packages/contracts`](../packages/contracts) | REST DTO, runtime protocol, catalog, pairing |
+| `@howling/web` | [`apps/web`](../apps/web) | React Router, Vanilla Extract, React Flow 편집기 |
+| `@howling/api` | [`apps/api`](../apps/api) | Fastify, 세션, pairing, flow/revision/deployment, WSS |
+| `@howling/runtime` | [`apps/runtime`](../apps/runtime) | SQLite coordinator, HA connector, 로컬 setup |
+| `@howling/oidc-test` | [`infra/oidc`](../infra/oidc) | 개발·E2E 전용 OIDC issuer |
+| `howling-e2e` | [`e2e`](../e2e) | Playwright. 워크스페이스 패키지가 아님 |
 
 루트 명령:
 
 ```bash
-pnpm dev          # postgres·oidc 후 세 앱
+pnpm dev          # postgres·oidc 후 api·runtime·web
 pnpm test         # 단위·계약·integration
 pnpm typecheck    # 전체 타입 검사
 pnpm build        # shared packages와 세 앱
-pnpm verify:phase0
+pnpm test:e2e     # 테스트 CA + Compose + Playwright
 ```
 
 ## `@howling/core` 안 구조
 
-세부 폴더는 **같은 패키지**입니다. 나중에 `@howling/compiler`처럼 쪼개지 않습니다.
+세부 폴더는 **같은 패키지**입니다. `@howling/compiler`처럼 쪼개지 않습니다.
 
 ```text
 packages/core/
@@ -45,7 +46,7 @@ packages/core/
   README.md           짧은 사용법
 ```
 
-Host(편집기, HA, MCP)는 `src/index.ts`가 내보내는 것만 보면 됩니다.
+Host(편집기, runtime, 이후 MCP)는 `src/index.ts`가 내보내는 것만 보면 됩니다.
 
 ## Core가 의존하지 않는 것
 
@@ -60,9 +61,13 @@ Host(편집기, HA, MCP)는 `src/index.ts`가 내보내는 것만 보면 됩니�
 ## 제품 패키지 경계
 
 - `contracts`는 browser-safe다. React·DB·HTTP 클라이언트를 넣지 않는다.
-- `connectors`는 아직 없다. web dependency graph로 가져오지 않는다.
-- Runtime은 `@howling/core`를 선언만 하고, 단계 0에서는 engine을 돌리지 않는다.
+- HA 구현은 `apps/runtime/src/ha/`에 있다. `packages/connectors`는 없다. web dependency graph로 가져오지 않는다.
+- Web은 로컬 compile을 위해 `@howling/core`를 의존해도 된다. React는 core에 없다.
+- HA 액션은 새 core 노드가 아니다. `core.effect` + adapter `homeassistant` / `call_service`다.
+- Catalog의 기본 effect 이름은 `external` / `invoke`다. contracts 패키지 경계 테스트가 `homeassistant` 문자열을 금지한다. 편집기가 저장할 때 adapter를 바꾼다.
 
-이 문서의 나머지 장은 `@howling/core` 자습서입니다.
+## 스타일
 
-다음: [Core가 하는 일](./core/01-overview.md)
+Web은 Vanilla Extract다. Tailwind, `cn`, `clsx`, `tailwind-merge`는 쓰지 않는다. 토큰은 `apps/web/src/styles/theme.css.ts`, 화면 스타일은 옆의 `*.css.ts` recipe다.
+
+다음: [제품 개요](./product/01-overview.md) 또는 [Core가 하는 일](./core/01-overview.md)

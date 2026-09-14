@@ -1,0 +1,213 @@
+/**
+ * Home Assistant WebSocket 연결.
+ */
+import WebSocket from "ws";
+import type { HaStatus } from "@howling/contracts";
+import { pendingId, readWsText } from "./ws-parse.js";
+
+export type HaEvent = {
+  readonly entityId: string;
+  readonly state: string;
+  readonly previous?: string;
+};
+
+export interface HaHandle {
+  readonly status: () => HaStatus;
+  readonly lastSyncAt: () => string | null;
+  readonly callService: (
+    domain: string,
+    service: string,
+    data: Record<string, unknown>,
+  ) => Promise<unknown>;
+  readonly stop: () => void;
+}
+
+export interface HaConnectorInput {
+  readonly url: string;
+  readonly token: string;
+  readonly onStatus: (status: HaStatus) => void;
+  readonly onEvent: (event: HaEvent) => void;
+  readonly onCall?: (call: { id: number; domain: string; service: string }) => void;
+}
+
+export const startHaConnector = (input: HaConnectorInput): HaHandle => {
+  let status: HaStatus = "connecting";
+  let lastSyncAt: string | null = null;
+  let nextId = 1;
+  let socket: WebSocket | undefined;
+  let stopped = false;
+  const pending = new Map<number, (value: unknown) => void>();
+  let snapshotDone = false;
+  let subscribed = false;
+  const known = new Map<string, string>();
+
+  const setStatus = (next: HaStatus) => {
+    status = next;
+    input.onStatus(next);
+  };
+
+  const send = (payload: Record<string, unknown>) => {
+    socket?.send(JSON.stringify(payload));
+  };
+
+  const failPending = (error: Error) => {
+    for (const wait of pending.values()) {
+      wait(error);
+    }
+    pending.clear();
+  };
+
+  const restCall = async (
+    domain: string,
+    service: string,
+    data: Record<string, unknown>,
+  ): Promise<unknown> => {
+    const response = await fetch(
+      `${input.url.replace(/\/$/, "")}/api/services/${domain}/${service}`,
+      {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${input.token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(data),
+        signal: AbortSignal.timeout(4000),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`ha rest ${String(response.status)}`);
+    }
+    return response.json();
+  };
+
+  const connect = () => {
+    if (stopped) {
+      return;
+    }
+    setStatus(status === "ready" ? "reconnecting" : "connecting");
+    snapshotDone = false;
+    subscribed = false;
+    const wsUrl = input.url.replace(/^http/, "ws").replace(/\/$/, "") + "/api/websocket";
+    const current = new WebSocket(wsUrl);
+    socket = current;
+    current.on("message", (raw) => {
+      let message: {
+        type: string;
+        success?: boolean;
+        id?: number | string;
+        result?: unknown;
+        event?: {
+          data?: {
+            entity_id?: string;
+            new_state?: { state?: string };
+            old_state?: { state?: string };
+          };
+        };
+      };
+      try {
+        message = JSON.parse(readWsText(raw)) as typeof message;
+      } catch {
+        return;
+      }
+      if (message.type === "auth_required") {
+        setStatus("authenticating");
+        send({ type: "auth", access_token: input.token });
+        return;
+      }
+      if (message.type === "auth_ok") {
+        setStatus("synchronizing");
+        const statesId = nextId;
+        nextId += 1;
+        pending.set(statesId, (result) => {
+          if (result instanceof Error || !Array.isArray(result)) {
+            return;
+          }
+          for (const item of result as { entity_id: string; state: string }[]) {
+            known.set(item.entity_id, item.state);
+          }
+          snapshotDone = true;
+          if (subscribed) {
+            lastSyncAt = new Date().toISOString();
+            setStatus("ready");
+          }
+        });
+        send({ id: statesId, type: "get_states" });
+        const servicesId = nextId;
+        nextId += 1;
+        pending.set(servicesId, () => undefined);
+        send({ id: servicesId, type: "get_services" });
+        const subId = nextId;
+        nextId += 1;
+        pending.set(subId, () => {
+          subscribed = true;
+          if (snapshotDone) {
+            lastSyncAt = new Date().toISOString();
+            setStatus("ready");
+          }
+        });
+        send({ id: subId, type: "subscribe_events", event_type: "state_changed" });
+        return;
+      }
+      if (message.type === "auth_invalid") {
+        setStatus("error");
+        current.close();
+        return;
+      }
+      const id = pendingId(message.id);
+      if (message.type === "result" && id !== undefined) {
+        const wait = pending.get(id);
+        pending.delete(id);
+        if (message.success === false) {
+          wait?.(new Error("ha request failed"));
+          return;
+        }
+        wait?.(message.result);
+        return;
+      }
+      if (message.type === "event" && status === "ready") {
+        const data = message.event?.data;
+        const entityId = data?.entity_id;
+        const next = data?.new_state?.state;
+        if (!entityId || next === undefined) {
+          return;
+        }
+        const previous = known.get(entityId);
+        known.set(entityId, next);
+        input.onEvent({
+          entityId,
+          state: next,
+          ...(previous === undefined ? {} : { previous }),
+        });
+      }
+    });
+    current.on("close", () => {
+      if (socket !== current) {
+        return;
+      }
+      if (!stopped && status !== "error") {
+        setStatus("disconnected");
+        setTimeout(connect, 2000);
+      }
+    });
+    current.on("error", () => {
+      current.close();
+    });
+  };
+
+  connect();
+  return {
+    status: () => status,
+    lastSyncAt: () => lastSyncAt,
+    callService: async (domain, service, data) => {
+      const id = nextId;
+      nextId += 1;
+      input.onCall?.({ id, domain, service });
+      return restCall(domain, service, data);
+    },
+    stop: () => {
+      stopped = true;
+      failPending(new Error("ha stopped"));
+      socket?.close();
+    },
+  };
+};

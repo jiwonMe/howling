@@ -1,0 +1,23 @@
+FROM node:22-bookworm AS builder
+RUN corepack enable
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
+COPY packages ./packages
+COPY apps ./apps
+COPY infra/oidc ./infra/oidc
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @howling/core --filter @howling/contracts --filter @howling/api --filter @howling/runtime --filter @howling/web build
+
+FROM node:22-bookworm-slim AS api
+WORKDIR /app
+COPY --from=builder /app /app
+CMD ["node", "apps/api/dist/main.js"]
+
+FROM node:22-bookworm-slim AS runtime
+WORKDIR /app
+COPY --from=builder /app /app
+CMD ["node", "apps/runtime/dist/main.js"]
+
+FROM nginx:1.27-alpine AS web
+COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
+COPY infra/e2e/nginx.conf /etc/nginx/conf.d/default.conf

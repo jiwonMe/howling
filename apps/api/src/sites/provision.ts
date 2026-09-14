@@ -16,6 +16,9 @@ export const seedBootstrap = async (
      ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
     [config.bootstrapSiteId, config.bootstrapSiteName],
   );
+  if (!config.bootstrapRuntimeToken) {
+    return;
+  }
   await pool.query(
     `INSERT INTO runtime_registrations
        (id, site_id, runtime_id, token_hash, connection_generation, online, created_at)

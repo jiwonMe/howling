@@ -21,6 +21,8 @@ import {
   markRuntimeOffline,
   touchRuntime,
 } from "./registry.js";
+import { attachRuntime, detachRuntime } from "./hub.js";
+import { handleRuntimeControl } from "./inbound.js";
 
 interface LiveSocket {
   socket: WebSocket;
@@ -55,10 +57,10 @@ export const registerRuntimeGateway = (
         void handleMessage(pool, live, socket, identity.runtimeId, raw);
       });
       socket.on("close", () => {
-        const current = live.get(identity.runtimeId);
-        if (current?.socket === socket) {
+        if (detachRuntime(identity.runtimeId, socket)) {
+          const current = live.get(identity.runtimeId);
           live.delete(identity.runtimeId);
-          void markRuntimeOffline(pool, identity.runtimeId, current.generation);
+          void markRuntimeOffline(pool, identity.runtimeId, current?.generation);
         }
       });
     });
@@ -86,9 +88,14 @@ const handleMessage = async (
   }
   if (envelope.type === "hello") {
     const payload = helloPayloadSchema.parse(envelope.payload);
-    const previous = live.get(envelope.runtimeId);
-    if (previous && previous.socket !== socket) {
-      previous.socket.close(4409, "replaced");
+    const replaced = attachRuntime({
+      socket,
+      generation: envelope.connectionGeneration,
+      siteId: envelope.siteId,
+      runtimeId: envelope.runtimeId,
+    });
+    if (replaced) {
+      replaced.socket.close(4409, "replaced");
     }
     live.set(envelope.runtimeId, {
       socket,
@@ -102,7 +109,9 @@ const handleMessage = async (
     sendEnvelope(socket, {
       ...baseEnvelope(envelope),
       type: "capabilities",
-      payload: capabilitiesPayloadSchema.parse({ connectors: [] }),
+      payload: capabilitiesPayloadSchema.parse({
+        connectors: payload.capabilities.connectors,
+      }),
     });
     return;
   }
@@ -116,7 +125,9 @@ const handleMessage = async (
         receivedAt: new Date().toISOString(),
       }),
     });
+    return;
   }
+  await handleRuntimeControl(pool, envelope);
 };
 
 const baseEnvelope = (envelope: RuntimeEnvelope) => ({

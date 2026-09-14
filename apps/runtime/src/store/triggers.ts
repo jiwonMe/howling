@@ -115,6 +115,16 @@ export const nextQueuedTrigger = (
   );
 };
 
+export const getTriggerByRun = (
+  db: Database.Database,
+  runId: string,
+): TriggerRow | undefined =>
+  mapTrigger(
+    db
+      .prepare(`SELECT ${TRIGGER_COLUMNS} FROM trigger_inbox WHERE run_id = ?`)
+      .get(runId),
+  );
+
 const mapTrigger = (row: unknown): TriggerRow | undefined => {
   if (!row || typeof row !== "object") {
     return undefined;

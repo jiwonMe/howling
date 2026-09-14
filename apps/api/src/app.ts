@@ -9,6 +9,8 @@ import { registerAuthRoutes } from "./auth/routes.js";
 import type { ApiConfig } from "./config.js";
 import { registerHealthRoutes } from "./health/routes.js";
 import { registerRuntimeGateway } from "./runtime/ws.js";
+import { registerFlowRoutes } from "./flows/routes.js";
+import { registerPairingRoutes } from "./pairings/routes.js";
 import { registerSiteRoutes } from "./sites/routes.js";
 
 export const createApiApp = async (
@@ -21,6 +23,8 @@ export const createApiApp = async (
   registerHealthRoutes(app, pool);
   registerAuthRoutes(app, pool, config);
   registerSiteRoutes(app, pool);
+  registerPairingRoutes(app, pool);
+  registerFlowRoutes(app, pool);
   registerRuntimeGateway(app, pool);
   return app;
 };

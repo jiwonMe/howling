@@ -2,7 +2,7 @@
 
 Howling 실행 커널입니다. 플로 정의를 검증하고, 노드를 단계적으로 평가하며, 외부 작업은 intent로만 남깁니다. Home Assistant, MCP, React, 데이터베이스에 의존하지 않습니다.
 
-자습서: [`docs/README.md`](../../docs/README.md) — 개념부터 dry-run·커스텀 노드까지 순서대로 있습니다.
+자습서: [`docs/README.md`](../../docs/README.md) — 제품 앱과 core를 갈래로 나눕니다. 엔진만 보려면 [`docs/core/01-overview.md`](../../docs/core/01-overview.md)부터 읽습니다.
 
 ## 설치
 

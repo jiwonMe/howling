@@ -1,0 +1,18 @@
+FROM mcr.microsoft.com/playwright:v1.55.0-noble
+USER root
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends libnss3-tools \
+  && rm -rf /var/lib/apt/lists/*
+COPY infra/tls/generated/ca.crt /usr/local/share/ca-certificates/howling-test.crt
+RUN update-ca-certificates
+COPY infra/e2e/playwright-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+WORKDIR /e2e
+COPY e2e/package.json ./
+RUN npm install
+COPY e2e/ ./
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV HOME=/root
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["npx", "playwright", "test"]

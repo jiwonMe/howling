@@ -1,0 +1,8 @@
+{
+  "name": "howling-ha-bootstrap",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}

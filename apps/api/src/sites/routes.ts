@@ -68,18 +68,33 @@ export const registerSiteRoutes = (
     );
     const row = result.rows[0];
     if (!row) {
-      return reply
-        .code(404)
-        .send(errorBody(errorCodes.notFound, "연결된 runtime이 없습니다."));
+      return runtimeStatusSchema.parse({
+        siteId,
+        runtimeId: "unpaired",
+        online: false,
+        paired: false,
+        connectionGeneration: 0,
+        lastSeenAt: null,
+        capabilities: null,
+        ha: { status: "not_configured" },
+      });
     }
+    const caps = row.capabilities as { ha?: { status?: string; lastSyncAt?: string | null } } | null;
     return runtimeStatusSchema.parse({
       siteId: row.site_id,
       runtimeId: row.runtime_id,
       online: row.online,
+      paired: true,
       connectionGeneration: row.connection_generation,
       lastSeenAt: row.last_seen_at ? row.last_seen_at.toISOString() : null,
       capabilities: row.capabilities,
-      ha: { status: "not_configured" },
+      ha: {
+        status: caps?.ha?.status ?? "not_configured",
+        ...(caps?.ha?.lastSyncAt === undefined
+          ? {}
+          : { lastSyncAt: caps.ha.lastSyncAt }),
+      },
     });
+
   });
 };

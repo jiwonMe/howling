@@ -1,0 +1,25 @@
+{
+	auto_https off
+	https_port 443
+}
+
+howling.test {
+	tls /certs/howling.test.crt /certs/howling.test.key
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+	handle /health {
+		reverse_proxy api:3000
+	}
+	handle /ready {
+		reverse_proxy api:3000
+	}
+	handle {
+		reverse_proxy web:80
+	}
+}
+
+auth.howling.test {
+	tls /certs/howling.test.crt /certs/howling.test.key
+	reverse_proxy oidc:8081
+}
