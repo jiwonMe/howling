@@ -25,7 +25,8 @@ export const seedBootstrap = async (
      VALUES ($1, $2, $3, $4, 0, FALSE, now())
      ON CONFLICT (site_id) DO UPDATE
        SET runtime_id = EXCLUDED.runtime_id,
-           token_hash = EXCLUDED.token_hash`,
+           token_hash = EXCLUDED.token_hash
+     WHERE runtime_registrations.runtime_id = EXCLUDED.runtime_id`,
     [
       "reg_bootstrap",
       config.bootstrapSiteId,

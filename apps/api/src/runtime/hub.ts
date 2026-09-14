@@ -49,6 +49,9 @@ export const runtimeBySite = (siteId: string): HubSocket | undefined => {
   return fallback;
 };
 
+export const runtimeIdBySite = (siteId: string): string | undefined =>
+  runtimeBySite(siteId)?.runtimeId;
+
 export const sendToRuntime = (
   siteId: string,
   type: string,

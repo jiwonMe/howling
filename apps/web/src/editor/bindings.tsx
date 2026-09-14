@@ -8,6 +8,7 @@ import type { TriggerBinding } from "@howling/contracts";
 import { field, input, label } from "../ui/form.css.js";
 import { cardTitle } from "../ui/card.css.js";
 import { sidebar } from "../ui/editor.css.js";
+import { TestPanel } from "./test-panel.js";
 
 export const Bindings = (props: {
   readonly definition: WorkflowDefinition;
@@ -15,12 +16,15 @@ export const Bindings = (props: {
   readonly triggers: readonly TriggerBinding[];
   readonly onNode: (node: NodeInstance) => void;
   readonly onTriggers: (triggers: readonly TriggerBinding[]) => void;
+  readonly testPower: string;
+  readonly onTestPower: (value: string) => void;
 }) => {
   const node = props.definition.nodes.find((item) => item.id === props.selectedId);
   const trigger = props.triggers[0];
   const inputId = props.definition.nodes.find((item) => item.type === "core.input")?.id ?? "input";
   return (
     <aside className={sidebar}>
+      <TestPanel onPower={props.onTestPower} power={props.testPower} />
       <h2 className={cardTitle}>Trigger</h2>
       <label className={field}>
         <span className={label}>HA entity</span>

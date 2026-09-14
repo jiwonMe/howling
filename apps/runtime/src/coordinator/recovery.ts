@@ -7,6 +7,7 @@ import { listPending } from "../store/pending.js";
 import { getRun, listOpenRuns } from "../store/runs.js";
 import { restoreRun } from "./compile.js";
 import type { HostContext } from "./context.js";
+import { scheduleDryRun } from "./schedule-dry.js";
 import { canAutoStep, isTerminalStatus } from "./status.js";
 import type { InboxMessage } from "./types.js";
 
@@ -72,6 +73,15 @@ const markLostDispatches = (ctx: HostContext): void => {
 const resumeOpenRuns = (ctx: HostContext): void => {
   for (const run of listOpenRuns(ctx.db)) {
     const restored = restoreRun(ctx, run);
+    if (run.runMode === "dryRun") {
+      if (run.progressionMode === "auto") {
+        scheduleDryRun(ctx, restored.state);
+      }
+      if (canAutoStep(restored.state, run.progressionMode)) {
+        void ctx.inbox.enqueue({ kind: "step", runId: run.runId });
+      }
+      continue;
+    }
     const blocked = restored.state.paused || restored.state.cancelled;
     for (const record of Object.values(restored.state.effects)) {
       if (record.status !== "requested" || blocked) {

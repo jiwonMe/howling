@@ -6,6 +6,8 @@ import type { RunStatus } from "./core-types.js";
 import type Database from "better-sqlite3";
 import type { ProgressionMode } from "./triggers.js";
 
+export type StoredRunMode = "live" | "dryRun";
+
 export interface RunRow {
   readonly runId: string;
   readonly flowId: string;
@@ -16,6 +18,7 @@ export interface RunRow {
   readonly holding: boolean;
   readonly stateEpoch: string;
   readonly lastEventSeq: number;
+  readonly runMode: StoredRunMode;
 }
 
 export const upsertRun = (
@@ -25,15 +28,16 @@ export const upsertRun = (
   db.prepare(
     `INSERT INTO run_snapshots
        (run_id, flow_id, artifact_id, snapshot_json, status, progression_mode,
-        holding, state_epoch, last_event_seq, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        holding, state_epoch, last_event_seq, updated_at, run_mode)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT (run_id) DO UPDATE SET
        snapshot_json = excluded.snapshot_json,
        status = excluded.status,
        progression_mode = excluded.progression_mode,
        holding = excluded.holding,
        last_event_seq = excluded.last_event_seq,
-       updated_at = excluded.updated_at`,
+       updated_at = excluded.updated_at,
+       run_mode = excluded.run_mode`,
   ).run(
     row.runId,
     row.flowId,
@@ -45,6 +49,7 @@ export const upsertRun = (
     row.stateEpoch,
     row.lastEventSeq,
     new Date().toISOString(),
+    row.runMode,
   );
 };
 
@@ -62,7 +67,10 @@ export const holdingRun = (
   mapRun(
     db
       .prepare(
-        `SELECT * FROM run_snapshots WHERE flow_id = ? AND holding = 1 LIMIT 1`,
+        `SELECT * FROM run_snapshots
+         WHERE flow_id = ? AND holding = 1 AND run_mode = 'live'
+           AND status NOT IN ('completed', 'failed', 'cancelled')
+         LIMIT 1`,
       )
       .get(flowId),
   );
@@ -104,6 +112,7 @@ const mapRun = (row: unknown): RunRow | undefined => {
     holding: number;
     state_epoch: string;
     last_event_seq: number;
+    run_mode?: StoredRunMode;
   };
   return {
     runId: value.run_id,
@@ -115,5 +124,6 @@ const mapRun = (row: unknown): RunRow | undefined => {
     holding: value.holding === 1,
     stateEpoch: value.state_epoch,
     lastEventSeq: value.last_event_seq,
+    runMode: value.run_mode ?? "live",
   };
 };

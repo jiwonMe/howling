@@ -10,6 +10,9 @@ import { heartbeatEnvelope, helloEnvelope } from "./messages.js";
 export interface GatewayHandle {
   readonly stop: () => void;
   readonly send: (type: string, payload: unknown) => boolean;
+  readonly runtimeId: () => string;
+  readonly hold: () => void;
+  readonly release: () => void;
   readonly setIdentity: (input: {
     readonly token: string;
     readonly runtimeId: string;
@@ -22,6 +25,7 @@ export const startRuntimeGateway = (
   token: string,
   factory?: (url: string, token: string) => WebSocket,
   onControl?: (envelope: RuntimeEnvelope) => void,
+  onReady?: () => void,
 ): GatewayHandle => {
   const open = factory ?? openSocket;
   let generation = 0;
@@ -29,6 +33,7 @@ export const startRuntimeGateway = (
   let heartbeat: ReturnType<typeof setInterval> | undefined;
   let reconnect: ReturnType<typeof setTimeout> | undefined;
   let stopped = false;
+  let held = false;
   let identity = {
     token,
     runtimeId: config.runtimeId,
@@ -52,6 +57,7 @@ export const startRuntimeGateway = (
           }),
         ),
       );
+      onReady?.();
       heartbeat = setInterval(() => {
         if (current.readyState === WebSocket.OPEN) {
           current.send(
@@ -79,7 +85,7 @@ export const startRuntimeGateway = (
       if (heartbeat) {
         clearInterval(heartbeat);
       }
-      if (!stopped) {
+      if (!stopped && !held) {
         reconnect = setTimeout(connect, 1000);
       }
     });
@@ -99,6 +105,20 @@ export const startRuntimeGateway = (
         clearTimeout(reconnect);
       }
       socket?.close();
+    },
+    runtimeId: () => identity.runtimeId,
+    hold: () => {
+      held = true;
+      if (reconnect) {
+        clearTimeout(reconnect);
+      }
+      socket?.close();
+    },
+    release: () => {
+      held = false;
+      if (!stopped && (!socket || socket.readyState !== WebSocket.OPEN)) {
+        connect();
+      }
     },
     send: (type, payload) => {
       if (!socket || socket.readyState !== WebSocket.OPEN) {

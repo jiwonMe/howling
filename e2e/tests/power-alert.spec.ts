@@ -58,6 +58,7 @@ test("builds a mean flow and turns on the HA helper once", async ({ page, reques
     expect(set.ok()).toBeTruthy();
     await expect.poll(async () => countRuns(page, flowId), { timeout: 60_000 }).toBe(before + 1);
     await expect.poll(async () => latestStatus(page, flowId), { timeout: 60_000 }).toBe("completed");
+    await page.waitForTimeout(500);
   }
 
   const hooks = await request.get("http://ha-control:8090/runtime-hooks");
@@ -78,6 +79,13 @@ test("builds a mean flow and turns on the HA helper once", async ({ page, reques
   await page.goto(`/runs/${last?.runId ?? ""}`);
   await expect(page.getByTestId("run-id")).toHaveText(last?.runId ?? "");
   await expect(page.getByTestId("run-revision")).toContainText(last?.revisionId ?? "");
+  await expect.poll(async () => {
+    const events = await page.request.get(
+      `https://howling.test/api/v1/sites/site_dev/runs/${last?.runId ?? ""}/events?after=0`,
+    );
+    const payload = (await events.json()) as { events: { sequence: number }[] };
+    return payload.events.length;
+  }).toBeGreaterThan(0);
 });
 
 const runsUrl = (flowId: string) =>
@@ -89,7 +97,7 @@ const countRuns = async (
 ) => {
   const response = await page.request.get(runsUrl(flowId));
   const body = (await response.json()) as { runs: { status: string }[] };
-  return body.runs.filter((run) => run.status === "completed").length;
+  return body.runs.length;
 };
 
 const latestStatus = async (

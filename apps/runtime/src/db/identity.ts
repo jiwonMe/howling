@@ -4,6 +4,21 @@
 import type Database from "better-sqlite3";
 import type { RuntimeConfig } from "../config.js";
 
+export const getIdentity = (
+  db: Database.Database,
+): { readonly runtimeId: string; readonly siteId: string } | undefined => {
+  const row = db
+    .prepare(`SELECT runtime_id, site_id FROM runtime_identity WHERE id = 1`)
+    .get() as { runtime_id: string; site_id: string } | undefined;
+  if (!row) {
+    return undefined;
+  }
+  return { runtimeId: row.runtime_id, siteId: row.site_id };
+};
+
+export const getRuntimeId = (db: Database.Database): string | undefined =>
+  getIdentity(db)?.runtimeId;
+
 export const upsertIdentity = (
   db: Database.Database,
   config: RuntimeConfig,

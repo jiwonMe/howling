@@ -23,7 +23,8 @@ const ask = async <T>(
     throw new UnauthorizedError();
   }
   if (!response.ok) {
-    throw new Error(`${url} ${String(response.status)}`);
+    const text = await response.text();
+    throw new Error(`${url} ${String(response.status)} ${text}`);
   }
   if (response.status === 204) {
     return undefined as T;
@@ -105,10 +106,61 @@ export const deployRevision = (
   flowId: string,
   csrf: string,
   revisionId: string,
+  options: { readonly rollback?: boolean; readonly stateEpoch?: "reset" | "keep" } = {},
 ) =>
   ask<{ deploymentId: string; generation: number }>(
     `/api/v1/sites/${siteId}/flows/${flowId}/deployments`,
-    { method: "POST", csrf, body: JSON.stringify({ revisionId }) },
+    {
+      method: "POST",
+      csrf,
+      body: JSON.stringify({
+        revisionId,
+        rollback: options.rollback,
+        stateEpoch: options.stateEpoch ?? "reset",
+      }),
+    },
+  );
+
+export const startTestSession = (
+  siteId: string,
+  flowId: string,
+  csrf: string,
+  body: {
+    readonly source: "draft" | "revision" | "run";
+    readonly revisionId?: string;
+    readonly runId?: string;
+    readonly input: unknown;
+    readonly fixtures: unknown[];
+    readonly progression?: "auto" | "manual";
+    readonly initialState?: Record<string, unknown>;
+    readonly idempotencyKey: string;
+  },
+) =>
+  ask<{ accepted: true; runId: string; testSessionId: string }>(
+    `/api/v1/sites/${siteId}/flows/${flowId}/test-sessions`,
+    { method: "POST", csrf, body: JSON.stringify(body) },
+  );
+
+export const postRunCommand = (
+  siteId: string,
+  runId: string,
+  csrf: string,
+  body: {
+    readonly type: "step" | "continue" | "pause" | "resume" | "cancel" | "fixture";
+    readonly commandId: string;
+    readonly effectId?: string;
+    readonly response?: unknown;
+  },
+) =>
+  ask<{ accepted: boolean }>(`/api/v1/sites/${siteId}/runs/${runId}/commands`, {
+    method: "POST",
+    csrf,
+    body: JSON.stringify(body),
+  });
+
+export const getRunEvents = (siteId: string, runId: string, after = 0) =>
+  ask<RunRow & { cursor: number; journal: { syncSeq: number; item: unknown }[] }>(
+    `/api/v1/sites/${siteId}/runs/${runId}/events?after=${String(after)}`,
   );
 
 export const getDeployment = (siteId: string, deploymentId: string) =>
@@ -152,6 +204,7 @@ export interface FlowDetail {
     readonly status: string;
     readonly generation: number;
   } | null;
+  readonly revisions?: readonly { readonly id: string; readonly created_at: string }[];
 }
 
 export interface RunRow {
@@ -162,4 +215,5 @@ export interface RunRow {
   readonly lastSeq: number;
   readonly trigger: unknown;
   readonly events: readonly { sequence: number; type: string; nodeId?: string }[];
+  readonly runMode?: string;
 }

@@ -39,18 +39,35 @@ export type {
 export { NODE_CATALOG_VERSION, officialCatalog } from "./catalog.js";
 export type { CatalogNode } from "./catalog.js";
 export {
+  deployRequestSchema,
   draftSaveSchema,
   editorSaveSchema,
+  effectFixtureSchema,
+  effectResponseSchema,
+  runCommandRequestSchema,
   runSummarySchema,
   startRunRequestSchema,
+  testSessionRequestSchema,
 } from "./flow-api.js";
-export type { DraftSave, EditorSave, RunSummary } from "./flow-api.js";
+export type {
+  DeployRequest,
+  DraftSave,
+  EditorSave,
+  EffectFixture,
+  RunCommandRequest,
+  RunSummary,
+  TestSessionRequest,
+} from "./flow-api.js";
 export {
   activationResultSchema,
   connectionsSnapshotSchema,
   desiredDeploymentSchema,
+  runCommandPayloadSchema,
   runStartPayloadSchema,
   runSummaryPayloadSchema,
+  summaryAckSchema,
+  summaryBatchSchema,
+  summaryItemSchema,
 } from "./runtime/control.js";
 export {
   parseRuntimeEnvelope,

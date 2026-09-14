@@ -1,51 +1,19 @@
 /**
- * 실행 상세. 5초 polling.
+ * 실행 상세. SSE가 우선이고 polling은 보조다.
  */
-import { useEffect, useState } from "react";
+import { RunControls } from "../run/run-controls.js";
+import { useRunStream } from "../run/use-run-stream.js";
 import { useParams } from "react-router-dom";
-import { loginHref, UnauthorizedError } from "../lib/api.js";
-import { getRun, type RunRow } from "../lib/flows-api.js";
-import { loadStatus } from "../lib/status.js";
+import { useState } from "react";
 import { caption, header, page, section, sectionTitle, subtitle, title } from "../ui/layout.css.js";
 import { stat, statDetail, statLabel, statStrip, statValue } from "../ui/stat.css.js";
 import { tableCell, tableHead, tableHeadNumeric, tableCellNumeric, tableMono, tableWrap } from "../ui/table.css.js";
+import type { RunRow } from "../lib/flows-api.js";
 
 export const RunPage = () => {
   const { runId } = useParams<{ runId: string }>();
-  const [row, setRow] = useState<RunRow>();
-  const [error, setError] = useState<string>();
-
-  useEffect(() => {
-    if (!runId) {
-      return;
-    }
-    let cancelled = false;
-    const refresh = async () => {
-      try {
-        const status = await loadStatus();
-        const next = await getRun(status.site.id, runId);
-        if (!cancelled) {
-          setRow(next);
-        }
-      } catch (caught) {
-        if (caught instanceof UnauthorizedError) {
-          window.location.assign(loginHref);
-          return;
-        }
-        if (!cancelled) {
-          setError(caught instanceof Error ? caught.message : "조회 실패");
-        }
-      }
-    };
-    void refresh();
-    const timer = window.setInterval(() => {
-      void refresh();
-    }, 5000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [runId]);
+  const { row, siteId, csrf, error } = useRunStream(runId);
+  const [message, setMessage] = useState<string>();
 
   if (error && !row) {
     return (
@@ -72,7 +40,12 @@ export const RunPage = () => {
             {row.runId}
           </p>
         </div>
+        {row.runMode === "dryRun" ? <p data-testid="dry-run-badge">시험</p> : null}
       </header>
+      {siteId && csrf ? (
+        <RunControls csrf={csrf} onMessage={setMessage} row={row} siteId={siteId} />
+      ) : null}
+      {message ? <p className={caption}>{message}</p> : null}
       <section className={statStrip()}>
         <article className={stat}>
           <p className={statLabel}>Status</p>
@@ -102,9 +75,7 @@ export const RunPage = () => {
   );
 };
 
-const EventTable = (props: {
-  readonly events: RunRow["events"];
-}) => (
+const EventTable = (props: { readonly events: RunRow["events"] }) => (
   <div className={tableWrap}>
     <table>
       <thead>

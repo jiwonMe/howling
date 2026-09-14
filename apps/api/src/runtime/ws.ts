@@ -20,6 +20,7 @@ import {
   markRuntimeHello,
   markRuntimeOffline,
   touchRuntime,
+  type RuntimeIdentity,
 } from "./registry.js";
 import { attachRuntime, detachRuntime } from "./hub.js";
 import { handleRuntimeControl } from "./inbound.js";
@@ -28,6 +29,8 @@ interface LiveSocket {
   socket: WebSocket;
   generation: number;
 }
+
+type SocketMessage = Buffer | ArrayBuffer | Buffer[];
 
 export const registerRuntimeGateway = (
   app: FastifyInstance,
@@ -48,32 +51,64 @@ export const registerRuntimeGateway = (
   app.get("/api/v1/runtime/ws", { websocket: true }, (socket, request) => {
     const header = request.headers.authorization ?? "";
     const token = header.startsWith("Bearer ") ? header.slice(7) : "";
-    void authenticateRuntime(pool, token).then((identity) => {
-      if (!identity) {
-        socket.close(4401, "unauthorized");
-        return;
-      }
-      socket.on("message", (raw) => {
-        void handleMessage(pool, live, socket, identity.runtimeId, raw);
-      });
-      socket.on("close", () => {
-        if (detachRuntime(identity.runtimeId, socket)) {
-          const current = live.get(identity.runtimeId);
-          live.delete(identity.runtimeId);
-          void markRuntimeOffline(pool, identity.runtimeId, current?.generation);
-        }
-      });
-    });
+    acceptRuntimeSocket(pool, live, socket, token);
+  });
+};
+
+const acceptRuntimeSocket = (
+  pool: pg.Pool,
+  live: Map<string, LiveSocket>,
+  socket: WebSocket,
+  token: string,
+): void => {
+  const pending: SocketMessage[] = [];
+  let queue = Promise.resolve();
+  let identity: RuntimeIdentity | undefined;
+
+  const enqueue = (raw: SocketMessage) => {
+    if (!identity) {
+      return;
+    }
+    const current = identity;
+    queue = queue
+      .then(() => handleMessage(pool, live, socket, current, raw))
+      .catch(() => undefined);
+  };
+
+  socket.on("message", (raw) => {
+    if (!identity) {
+      pending.push(raw);
+      return;
+    }
+    enqueue(raw);
   });
 
+  void authenticateRuntime(pool, token).then((found) => {
+    if (!found) {
+      pending.length = 0;
+      socket.close(4401, "unauthorized");
+      return;
+    }
+    identity = found;
+    socket.on("close", () => {
+      if (detachRuntime(found.runtimeId, socket)) {
+        const current = live.get(found.runtimeId);
+        live.delete(found.runtimeId);
+        void markRuntimeOffline(pool, found.runtimeId, current?.generation);
+      }
+    });
+    for (const raw of pending.splice(0)) {
+      enqueue(raw);
+    }
+  });
 };
 
 const handleMessage = async (
   pool: pg.Pool,
   live: Map<string, LiveSocket>,
   socket: WebSocket,
-  expectedRuntimeId: string,
-  raw: Buffer | ArrayBuffer | Buffer[],
+  identity: RuntimeIdentity,
+  raw: SocketMessage,
 ): Promise<void> => {
   let envelope: RuntimeEnvelope;
   try {
@@ -82,25 +117,13 @@ const handleMessage = async (
     socket.close(4400, "invalid envelope");
     return;
   }
-  if (envelope.runtimeId !== expectedRuntimeId) {
+  if (envelope.runtimeId !== identity.runtimeId) {
     socket.close(4403, "runtime mismatch");
     return;
   }
   if (envelope.type === "hello") {
     const payload = helloPayloadSchema.parse(envelope.payload);
-    const replaced = attachRuntime({
-      socket,
-      generation: envelope.connectionGeneration,
-      siteId: envelope.siteId,
-      runtimeId: envelope.runtimeId,
-    });
-    if (replaced) {
-      replaced.socket.close(4409, "replaced");
-    }
-    live.set(envelope.runtimeId, {
-      socket,
-      generation: envelope.connectionGeneration,
-    });
+    bindHub(live, socket, identity, envelope);
     await markRuntimeHello(pool, {
       runtimeId: envelope.runtimeId,
       generation: envelope.connectionGeneration,
@@ -117,6 +140,7 @@ const handleMessage = async (
   }
   if (envelope.type === "heartbeat") {
     heartbeatPayloadSchema.parse(envelope.payload);
+    bindHub(live, socket, identity, envelope);
     await touchRuntime(pool, envelope.runtimeId);
     sendEnvelope(socket, {
       ...baseEnvelope(envelope),
@@ -128,6 +152,27 @@ const handleMessage = async (
     return;
   }
   await handleRuntimeControl(pool, envelope);
+};
+
+const bindHub = (
+  live: Map<string, LiveSocket>,
+  socket: WebSocket,
+  identity: RuntimeIdentity,
+  envelope: RuntimeEnvelope,
+): void => {
+  const replaced = attachRuntime({
+    socket,
+    generation: envelope.connectionGeneration,
+    siteId: identity.siteId,
+    runtimeId: envelope.runtimeId,
+  });
+  if (replaced) {
+    replaced.socket.close(4409, "replaced");
+  }
+  live.set(envelope.runtimeId, {
+    socket,
+    generation: envelope.connectionGeneration,
+  });
 };
 
 const baseEnvelope = (envelope: RuntimeEnvelope) => ({

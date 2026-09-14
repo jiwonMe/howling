@@ -34,6 +34,7 @@ export const persistTransition = (
   const work = db.transaction(() => {
     const snapshot = engine.snapshot(input.transition.state);
     const terminal = isTerminal(input.transition.state.status);
+    const dryRun = input.transition.state.mode === "dryRun";
     upsertRun(db, {
       runId: input.runId,
       flowId: input.flowId,
@@ -41,13 +42,16 @@ export const persistTransition = (
       snapshot,
       status: input.transition.state.status,
       progressionMode: input.progressionMode,
-      holding: !terminal,
+      holding: !terminal && !dryRun,
       stateEpoch: input.stateEpoch,
       lastEventSeq: input.transition.state.lastEventSeq,
+      runMode: input.transition.state.mode,
     });
     insertEvents(db, input.transition.events);
     for (const event of input.transition.events) {
-      applyAnalysis(db, input, event);
+      if (!dryRun) {
+        applyAnalysis(db, input, event);
+      }
     }
     for (const record of Object.values(input.transition.state.effects)) {
       upsertOutbox(db, {

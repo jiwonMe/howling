@@ -56,10 +56,19 @@ export const getFlow = async (pool: pg.Pool, siteId: string, flowId: string) => 
     `SELECT * FROM deployments WHERE flow_id = $1 ORDER BY generation DESC LIMIT 1`,
     [flowId],
   );
+  const revisions = await pool.query(
+    `SELECT id, created_at FROM flow_revisions WHERE flow_id = $1 ORDER BY created_at DESC LIMIT 20`,
+    [flowId],
+  );
   if (!draft.rows[0]) {
     return undefined;
   }
-  return { draft: draft.rows[0], editor: editor.rows[0], deployment: deploy.rows[0] };
+  return {
+    draft: draft.rows[0],
+    editor: editor.rows[0],
+    deployment: deploy.rows[0],
+    revisions: revisions.rows,
+  };
 };
 
 export const saveDraft = async (

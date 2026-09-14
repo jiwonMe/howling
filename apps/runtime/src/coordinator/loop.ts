@@ -9,6 +9,7 @@ import {
   handleResume,
   handleStep,
 } from "./handle-control.js";
+import { handleDryStart, handleFixture } from "./handle-dry-run.js";
 import { handleCoreCommand, handleDispatch } from "./handle-effect.js";
 import { handleStart } from "./handle-start.js";
 import type { InboxMessage } from "./types.js";
@@ -20,6 +21,10 @@ export const handleMessage = async (
   switch (message.kind) {
     case "start_run":
       return handleStart(ctx, message);
+    case "start_dry_run":
+      return handleDryStart(ctx, message);
+    case "fixture":
+      return handleFixture(ctx, message);
     case "step":
       return handleStep(ctx, message);
     case "continue":

@@ -9,6 +9,7 @@ import type Database from "better-sqlite3";
 export interface RunView {
   readonly runId: string;
   readonly status: string;
+  readonly runMode: string;
   readonly progressionMode: string;
   readonly lastSeq: number;
   readonly outbox: readonly {
@@ -34,6 +35,7 @@ export const readRunView = (
   return {
     runId,
     status: run.status,
+    runMode: run.runMode,
     progressionMode: run.progressionMode,
     lastSeq: run.lastEventSeq,
     outbox: outbox.map((row) => ({

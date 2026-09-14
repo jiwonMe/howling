@@ -5,6 +5,12 @@
 
 howling.test {
 	tls /certs/howling.test.crt /certs/howling.test.key
+	@events path_regexp ^/api/v1/sites/.+/runs/.+/events$
+	handle @events {
+		reverse_proxy api:3000 {
+			flush_interval -1
+		}
+	}
 	handle /api/* {
 		reverse_proxy api:3000
 	}

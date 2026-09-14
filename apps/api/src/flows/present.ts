@@ -21,6 +21,7 @@ export const presentFlow = (row: {
     readonly status: string;
     readonly generation: number;
   };
+  readonly revisions?: readonly { readonly id: string; readonly created_at: string }[];
 }) => ({
   flowId: row.draft.id,
   name: row.draft.name,
@@ -47,6 +48,7 @@ export const presentFlow = (row: {
         generation: row.deployment.generation,
       }
     : null,
+  revisions: row.revisions ?? [],
 });
 
 export const presentRun = (row: {
@@ -57,6 +59,7 @@ export const presentRun = (row: {
   readonly last_seq: number;
   readonly trigger_json: unknown;
   readonly events_json: unknown;
+  readonly run_mode?: string;
 }) => ({
   runId: row.run_id,
   flowId: row.flow_id,
@@ -65,4 +68,5 @@ export const presentRun = (row: {
   lastSeq: row.last_seq,
   trigger: row.trigger_json,
   events: row.events_json,
+  runMode: row.run_mode ?? "live",
 });

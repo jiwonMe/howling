@@ -4,7 +4,7 @@
 import { NODE_CATALOG_VERSION, type RevisionArtifact } from "@howling/contracts";
 import type { HowlingEngine } from "@howling/core";
 import type Database from "better-sqlite3";
-import { getDeployment, upsertArtifact } from "../store/artifacts.js";
+import { activatePointer, getDeployment, nextStateEpoch, storeArtifact } from "../store/artifacts.js";
 
 export const activateArtifact = (
   db: Database.Database,
@@ -13,6 +13,8 @@ export const activateArtifact = (
     readonly deploymentId: string;
     readonly generation: number;
     readonly artifact: RevisionArtifact;
+    readonly rollback?: boolean;
+    readonly stateEpoch?: "reset" | "keep";
   },
 ): { status: "active" | "failed" | "ignored"; error?: string } => {
   const current = getDeployment(db, input.artifact.flowId);
@@ -35,12 +37,34 @@ export const activateArtifact = (
       error: compiled.diagnostics.map((item) => item.message).join("; "),
     };
   }
-  upsertArtifact(db, {
+  storeArtifact(db, {
     id: input.artifact.revisionId,
     definition: input.artifact.definition,
     triggers: input.artifact.triggers,
     connections: input.artifact.connections,
+  });
+  activatePointer(db, {
+    flowId: input.artifact.flowId,
+    artifactId: input.artifact.revisionId,
     generation: input.generation,
+    stateEpoch: resolveEpoch(current, input),
   });
   return { status: "active" };
+};
+
+const resolveEpoch = (
+  current: { artifactId: string; stateEpoch: string } | undefined,
+  input: {
+    readonly artifact: RevisionArtifact;
+    readonly stateEpoch?: "reset" | "keep";
+  },
+): string => {
+  if (
+    input.stateEpoch === "keep" &&
+    current &&
+    current.artifactId === input.artifact.revisionId
+  ) {
+    return current.stateEpoch;
+  }
+  return nextStateEpoch(current?.stateEpoch);
 };

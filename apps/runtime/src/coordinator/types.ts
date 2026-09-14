@@ -1,7 +1,7 @@
 /**
  * Coordinator inbox 메시지.
  */
-import type { EngineCommand, JsonValue } from "@howling/core";
+import type { EngineCommand, EffectFixture, EffectResponse, JsonValue } from "@howling/core";
 import type { ProgressionMode } from "../store/triggers.js";
 
 export type InboxMessage =
@@ -12,6 +12,29 @@ export type InboxMessage =
       readonly input: JsonValue;
       readonly mode: ProgressionMode;
       readonly idempotencyKey: string;
+    }
+  | {
+      readonly kind: "start_dry_run";
+      readonly triggerId: string;
+      readonly artifactId: string;
+      readonly input: JsonValue;
+      readonly mode: ProgressionMode;
+      readonly idempotencyKey: string;
+      readonly runId?: string;
+      readonly fixtures: readonly EffectFixture[];
+      readonly fixtureBundleVersion: string;
+      readonly initialState?: Readonly<Record<string, JsonValue>>;
+      readonly testSessionId?: string;
+      readonly definition?: unknown;
+      readonly triggers?: unknown;
+      readonly connections?: unknown;
+    }
+  | {
+      readonly kind: "fixture";
+      readonly runId: string;
+      readonly commandId: string;
+      readonly effectId: string;
+      readonly response: EffectResponse;
     }
   | {
       readonly kind: "step";

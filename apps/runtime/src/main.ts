@@ -8,12 +8,12 @@ import { createRuntimeApp } from "./app.js";
 import { loadRuntimeConfig } from "./config.js";
 import { createRuntimeHost } from "./coordinator/host.js";
 import { openSqlite } from "./db/client.js";
-import { upsertIdentity } from "./db/identity.js";
+import { getIdentity, upsertIdentity } from "./db/identity.js";
 import { migrateSqlite } from "./db/migrate.js";
 import { createFakeAdapter } from "./effects/fake-adapter.js";
 import { handleCloudControl } from "./gateway/control.js";
 import { startRuntimeGateway } from "./gateway/client.js";
-import { publishRunSummary } from "./gateway/summary.js";
+import { flushUnackedSummaries, publishRunSummary } from "./gateway/summary.js";
 import { createHaAwareAdapter } from "./ha/adapter.js";
 import { startHaConnector, type HaHandle } from "./ha/client.js";
 import { createHaCallLog } from "./ha/hooks.js";
@@ -27,9 +27,10 @@ const db = openSqlite(config.sqlitePath);
 const migrations = join(dirname(fileURLToPath(import.meta.url)), "../migrations");
 migrateSqlite(db, migrations);
 
+const stored = getIdentity(db);
 const session = {
-  runtimeId: config.runtimeId,
-  siteId: config.siteId,
+  runtimeId: stored?.runtimeId ?? config.runtimeId,
+  siteId: stored?.siteId ?? config.siteId,
   token: readSecret(config.secretRoot, "runtime-token") ?? readRuntimeToken(config),
 };
 upsertIdentity(db, { ...config, runtimeId: session.runtimeId, siteId: session.siteId });
@@ -45,9 +46,17 @@ const host = createRuntimeHost({
   }),
 });
 
-const gateway = startRuntimeGateway(config, session.token, undefined, (envelope) => {
-  handleCloudControl(host, gateway, envelope);
-});
+const gateway = startRuntimeGateway(
+  { ...config, runtimeId: session.runtimeId, siteId: session.siteId },
+  session.token,
+  undefined,
+  (envelope) => {
+    handleCloudControl(host, gateway, envelope);
+  },
+  () => {
+    flushUnackedSummaries(host, gateway);
+  },
+);
 
 const reportHa = (status: HaStatus) => {
   gateway.send("connections.snapshot", {
@@ -72,7 +81,11 @@ const startHa = () => {
 };
 
 host.afterCommit = (hint) => {
-  publishRunSummary(host, gateway, hint.runId);
+  try {
+    publishRunSummary(host, gateway, hint.runId);
+  } catch {
+    // 요약 전송 실패는 실행을 멈추지 않는다.
+  }
   return "continue";
 };
 
@@ -103,7 +116,7 @@ const app = createRuntimeApp(db, host, {
   pairing,
   pairingDeps,
   onHaSaved: startHa,
-  ...(config.testHooks ? { hooks: haLog } : {}),
+  ...(config.testHooks ? { hooks: haLog, gateway } : {}),
 });
 await app.listen({ host: config.listenHost, port: config.listenPort });
 

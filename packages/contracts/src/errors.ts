@@ -20,6 +20,7 @@ export const errorCodes = {
   invalidRequest: "invalid_request",
   csrfFailed: "csrf_failed",
   runtimeOffline: "runtime_offline",
+  resyncRequired: "resync_required",
 } as const;
 
 export const errorBody = (code: string, message: string): ErrorBody => ({

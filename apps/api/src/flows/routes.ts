@@ -1,9 +1,9 @@
 /**
  * Site 아래 flow·catalog·run route.
  */
-import { randomUUID } from "node:crypto";
 import {
   NODE_CATALOG_VERSION,
+  deployRequestSchema,
   draftSaveSchema,
   editorSaveSchema,
   errorBody,
@@ -16,7 +16,7 @@ import type pg from "pg";
 import { requireCsrf } from "../auth/session.js";
 import { sendToRuntime } from "../runtime/hub.js";
 import { requireSiteMember } from "../sites/access.js";
-import { artifactDigest } from "./digest.js";
+import { artifactFromDraft } from "./artifact.js";
 import {
   createFlow,
   getFlow,
@@ -163,59 +163,28 @@ export const registerFlowRoutes = (
     if (!flow) {
       return reply.code(404).send(errorBody(errorCodes.notFound, "flow not found"));
     }
-    const definition = {
-      ...(flow.draft.definition_json as object),
-      id: flowId,
-      revision: "pending",
-    };
-    const compiled = compileDefinition(definition);
+    const artifact = artifactFromDraft({
+      siteId: member.siteId,
+      flowId,
+      definition: flow.draft.definition_json as object,
+      triggers: flow.draft.triggers_json as RevisionArtifact["triggers"],
+      connections: flow.draft.connections_json as RevisionArtifact["connections"],
+      executionPolicy: flow.draft.execution_policy_json as RevisionArtifact["executionPolicy"],
+    });
+    const compiled = compileDefinition(artifact.definition);
     if (!compiled.ok) {
       return reply.code(400).send(compiled);
     }
-    const revisionId = randomUUID();
-    const definitionWithId = {
-      ...definition,
-      revision: revisionId,
-    } as RevisionArtifact["definition"];
-    const triggers = flow.draft.triggers_json as RevisionArtifact["triggers"];
-    const connections = flow.draft.connections_json as RevisionArtifact["connections"];
-    const executionPolicy = flow.draft
-      .execution_policy_json as RevisionArtifact["executionPolicy"];
     if (
-      Array.isArray(triggers) &&
-      triggers.some((item) => item.kind === "ha.state_changed") &&
-      !(Array.isArray(connections) && connections.some((item) => item.kind === "ha"))
+      artifact.triggers.some((item) => item.kind === "ha.state_changed") &&
+      !artifact.connections.some((item) => item.kind === "ha")
     ) {
       return reply
         .code(400)
         .send(errorBody(errorCodes.invalidRequest, "HA trigger requires an HA connection"));
     }
-    const requirements = {
-      protocolVersion: 1 as const,
-      nodeCatalogVersion: NODE_CATALOG_VERSION,
-      connectors: ["homeassistant"] as const,
-    };
-    const digest = artifactDigest({
-      definition: { ...definitionWithId, revision: "" },
-      triggers,
-      connections,
-      executionPolicy,
-      requirements,
-    });
-    const artifact: RevisionArtifact = {
-      schemaVersion: 1,
-      siteId: member.siteId,
-      flowId,
-      revisionId,
-      definition: definitionWithId,
-      triggers,
-      connections,
-      requirements,
-      executionPolicy,
-      artifactDigest: digest,
-    };
     await insertRevision(pool, member.siteId, flowId, artifact);
-    return { revisionId, digest };
+    return { revisionId: artifact.revisionId, digest: artifact.artifactDigest };
   });
 
   app.post("/api/v1/sites/:siteId/flows/:flowId/deployments", async (request, reply) => {
@@ -224,23 +193,34 @@ export const registerFlowRoutes = (
       return;
     }
     const { flowId } = request.params as { flowId: string };
-    const body = request.body as { revisionId?: string };
-    if (!body.revisionId) {
+    const parsed = deployRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
       return reply.code(400).send(errorBody(errorCodes.invalidRequest, "revisionId required"));
     }
-    const artifact = await getRevision(pool, body.revisionId);
+    const flow = await getFlow(pool, member.siteId, flowId);
+    if (
+      parsed.data.stateEpoch === "keep" &&
+      flow?.deployment?.revision_id !== parsed.data.revisionId
+    ) {
+      return reply
+        .code(400)
+        .send(errorBody(errorCodes.invalidRequest, "keep is only valid for the same revision"));
+    }
+    const artifact = await getRevision(pool, parsed.data.revisionId);
     if (!artifact) {
       return reply.code(404).send(errorBody(errorCodes.notFound, "revision not found"));
     }
     const created = await insertDeployment(pool, {
       siteId: member.siteId,
       flowId,
-      revisionId: body.revisionId,
+      revisionId: parsed.data.revisionId,
     });
     const sent = sendToRuntime(member.siteId, "desired.deployment", {
       deploymentId: created.id,
       generation: created.generation,
       artifact,
+      rollback: parsed.data.rollback,
+      stateEpoch: parsed.data.stateEpoch ?? "reset",
     });
     if (!sent) {
       return reply.code(409).send(errorBody(errorCodes.runtimeOffline, "runtime offline"));

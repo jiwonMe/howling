@@ -4,6 +4,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import type Database from "better-sqlite3";
 import type { RuntimeHost } from "./coordinator/host.js";
+import type { GatewayHandle } from "./gateway/client.js";
 import type { HaCallLog } from "./ha/hooks.js";
 import { registerHealthRoutes } from "./health/routes.js";
 import { registerHookRoutes } from "./http/hooks.js";
@@ -20,6 +21,7 @@ export const createRuntimeApp = (
     readonly pairingDeps?: PairingDeps;
     readonly onHaSaved?: () => void;
     readonly hooks?: HaCallLog;
+    readonly gateway?: GatewayHandle;
   },
 ): FastifyInstance => {
   const app = Fastify({ logger: false });
@@ -36,7 +38,7 @@ export const createRuntimeApp = (
     });
   }
   if (extras?.hooks) {
-    registerHookRoutes(app, extras.hooks);
+    registerHookRoutes(app, extras.hooks, extras.gateway);
   }
   return app;
 };

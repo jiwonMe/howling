@@ -7,7 +7,7 @@
 - 왼쪽: Input, Rolling mean, Condition, Effect
 - 가운데: React Flow. 노드를 추가하면 이전 노드와 자동으로 이어집니다. Condition은 `true` 포트
 - 오른쪽: HA trigger entity, 선택 노드 binding
-- 위: 저장, 검증, Revision, 배포
+- 위: 저장, 검증, Revision, 배포, 시험, 되돌리기
 
 ## 전력 평균 플로를 만드는 예
 
@@ -35,7 +35,10 @@
 | `GET /deployments/:id` | requested / validating / staged / active / failed |
 | `GET /connections`, `GET /catalog` | runtime이 보고한 metadata |
 | `POST /flows/:id/runs` | 배포된 revision 수동 실행, idempotency key |
+| `POST /flows/:id/test-sessions` | draft/revision/run을 고정해 dry-run. 202 + runId |
+| `POST /runs/:id/commands` | step/continue/pause/fixture. 오프라인 409 |
 | `GET /runs`, `GET /runs/:id` | 요약. 원본 payload 없음 |
+| `GET /runs/:id/events` | summary SSE 또는 JSON cursor |
 
 로그인된 세션으로 목록을 보는 예:
 
@@ -111,8 +114,8 @@ WSS 이름(예약 그대로):
 
 | 방향 | type |
 | --- | --- |
-| API → runtime | `desired.deployment`, `run.start` |
-| runtime → API | `hello`, `heartbeat`, `activation.result`, `run.summary`, `connections.snapshot` |
+| API → runtime | `desired.deployment`, `run.start`, `run.step`, `summary.ack` |
+| runtime → API | `hello`, `heartbeat`, `activation.result`, `summary.batch`, `run.summary`, `connections.snapshot` |
 
 Runtime은 digest·노드 버전·HA connection binding을 검사한 뒤 `revision_artifacts`를 upsert합니다. 활성 포인터는 한 SQLite 트랜잭션입니다. 실패하면 이전 활성 revision을 유지합니다.
 
@@ -120,7 +123,7 @@ Runtime은 digest·노드 버전·HA connection binding을 검사한 뒤 `revisi
 
 ## 실행 상세
 
-`/runs/:runId`는 5초마다 `GET /runs/:runId`를 다시 부릅니다. Summary SSE는 단계 3입니다.
+`/runs/:runId`는 summary SSE를 구독합니다. 실패하면 5초 polling이 보조합니다. 자세한 시험·rollback은 [Dry-run](./06-dry-run.md)입니다.
 
 화면에 남는 것:
 

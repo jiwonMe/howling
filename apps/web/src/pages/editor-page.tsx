@@ -4,7 +4,8 @@
 import type { TriggerBinding } from "@howling/contracts";
 import type { WorkflowDefinition } from "@howling/core";
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { defaultTestFixtures } from "../editor/test-fixtures.js";
 import { Bindings } from "../editor/bindings.js";
 import { FlowCanvas } from "../editor/flow-canvas.js";
 import { Palette } from "../editor/palette.js";
@@ -16,6 +17,7 @@ import {
   getFlow,
   saveDraft,
   saveEditor,
+  startTestSession,
   validateFlow,
   type FlowDetail,
 } from "../lib/flows-api.js";
@@ -39,6 +41,7 @@ import { page, subtitle } from "../ui/layout.css.js";
 type NodeInstance = WorkflowDefinition["nodes"][number];
 
 export const EditorPage = () => {
+  const navigate = useNavigate();
   const { flowId } = useParams<{ flowId: string }>();
   const [siteId, setSiteId] = useState<string>();
   const [csrf, setCsrf] = useState<string>();
@@ -49,6 +52,7 @@ export const EditorPage = () => {
   const [selectedId, setSelectedId] = useState<string>();
   const [message, setMessage] = useState<string>();
   const [deployStatus, setDeployStatus] = useState<string>();
+  const [testPower, setTestPower] = useState("1400");
 
   useEffect(() => {
     if (!flowId) {
@@ -84,6 +88,10 @@ export const EditorPage = () => {
     );
   }
 
+  const previousRevision = (detail.revisions ?? []).find(
+    (item) => item.id !== detail.deployment?.revisionId,
+  )?.id;
+
   const persist = async () => {
     const next = repairBindings(definition);
     setDefinition(next);
@@ -101,6 +109,7 @@ export const EditorPage = () => {
     const saved = await getFlow(siteId, flowId);
     setDetail(saved);
     setMessage("저장했습니다.");
+    return next;
   };
 
   return (
@@ -198,6 +207,55 @@ export const EditorPage = () => {
           >
             배포
           </button>
+          <button
+            className={buttonRecipe()}
+            data-testid="dry-run-flow"
+            type="button"
+            onClick={() => {
+              void persist()
+                .then((next) =>
+                  startTestSession(siteId, flowId, csrf, {
+                    source: "draft",
+                    input: { power: Number(testPower) },
+                    fixtures: defaultTestFixtures(next),
+                    progression: "auto",
+                    idempotencyKey: `test-${Date.now()}`,
+                  }),
+                )
+                .then((session) => navigate(`/runs/${session.runId}`))
+                .catch((caught: unknown) =>
+                  setMessage(caught instanceof Error ? caught.message : "시험 실패"),
+                );
+            }}
+          >
+            시험
+          </button>
+          {previousRevision ? (
+            <button
+              className={buttonRecipe()}
+              data-testid="rollback-flow"
+              type="button"
+              onClick={() => {
+                void deployRevision(siteId, flowId, csrf, previousRevision, {
+                  rollback: true,
+                  stateEpoch: "reset",
+                }).then(async (deployed) => {
+                  setMessage("되돌리기 요청");
+                  for (let attempt = 0; attempt < 40; attempt += 1) {
+                    const row = await getDeployment(siteId, deployed.deploymentId);
+                    setDeployStatus(row.status);
+                    if (row.status === "active" || row.status === "failed") {
+                      setMessage(`배포 ${row.status}`);
+                      return;
+                    }
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
+                  }
+                });
+              }}
+            >
+              되돌리기
+            </button>
+          ) : null}
         </div>
       </div>
       <Palette
@@ -209,7 +267,9 @@ export const EditorPage = () => {
       />
       <Bindings
         definition={definition}
+        onTestPower={setTestPower}
         selectedId={selectedId}
+        testPower={testPower}
         triggers={triggers}
         onTriggers={setTriggers}
         onNode={(node: NodeInstance) => setDefinition(replaceNode(definition, node.id, node))}

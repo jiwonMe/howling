@@ -42,6 +42,36 @@ export const createTestHost = (
   return Object.assign(host, { path: opened.path });
 };
 
+export const startDryRun = async (
+  host: RuntimeHost,
+  input: {
+    readonly artifactId: string;
+    readonly input?: JsonValue;
+    readonly mode?: "auto" | "manual";
+    readonly idempotencyKey?: string;
+    readonly fixtures?: import("@howling/core").EffectFixture[];
+    readonly initialState?: Readonly<Record<string, JsonValue>>;
+    readonly runId?: string;
+    readonly definition?: unknown;
+  },
+) => {
+  const result = await host.enqueue({
+    kind: "start_dry_run",
+    triggerId: randomUUID(),
+    artifactId: input.artifactId,
+    input: input.input ?? null,
+    mode: input.mode ?? "auto",
+    idempotencyKey: input.idempotencyKey ?? randomUUID(),
+    runId: input.runId,
+    fixtures: input.fixtures ?? [],
+    fixtureBundleVersion: "test",
+    initialState: input.initialState,
+    ...(input.definition ? { definition: input.definition } : {}),
+  });
+  await host.waitIdle();
+  return result as { triggerId: string; runId: string | null; status: string };
+};
+
 export const startRun = async (
   host: RuntimeHost,
   input: {

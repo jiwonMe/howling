@@ -59,6 +59,9 @@ export const handleDispatch = async (
   message: Extract<InboxMessage, { kind: "dispatch" }>,
 ): Promise<unknown> => {
   const run = requireRun(ctx, message.runId);
+  if (run.runMode === "dryRun") {
+    return { skipped: true };
+  }
   const restored = restoreRun(ctx, run);
   if (restored.state.paused || restored.state.cancelled) {
     return { skipped: true };

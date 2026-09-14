@@ -66,8 +66,8 @@ HA input_number.test_power state_changed
 | `/` | API ready, runtime online, HA 상태 |
 | `/connections` | pairing code 입력. secret 재조회 API 없음 |
 | `/flows` | 초안·활성 revision·배포 상태, 최근 실행 |
-| `/flows/:flowId` | 팔레트, React Flow, binding, 저장·검증·배포 |
-| `/runs/:runId` | revision, trigger, 노드/edge 이벤트. 5초 polling |
+| `/flows/:flowId` | 팔레트, React Flow, binding, 저장·검증·시험·배포 |
+| `/runs/:runId` | revision, trigger, 노드/edge 이벤트. SSE, 실패 시 polling |
 
 로컬 setup은 클라우드 편집기의 복제가 아닙니다. `http://127.0.0.1:4000/setup`에서 HA URL·토큰과 pairing만 다룹니다.
 
@@ -83,11 +83,10 @@ Editor 좌표만 바꾸면 revision digest가 바뀌지 않습니다. 늦은 이
 
 ## 아직 없는 것
 
-- Dry-run fixture UI, replay, SyncJournal
-- 실행 요약 SSE
 - MCP (외부 연결·플랫폼 `/mcp`)
-- Rollback / state-epoch UI
-- HA OS 앱, 관측 차트
+- HA OS 앱, 관측 차트, 원본 전송 ON/보관 용량 UI
 - 호스트 머신에 테스트 CA 설치
+
+시험·SSE·rollback: [Dry-run과 운영 복구](./06-dry-run.md)
 
 다음: [로컬 개발](./02-local-dev.md)

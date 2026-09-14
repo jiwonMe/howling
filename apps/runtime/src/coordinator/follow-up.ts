@@ -6,6 +6,7 @@ import { getArtifact } from "../store/artifacts.js";
 import type { ProgressionMode } from "../store/triggers.js";
 import { nextQueuedTrigger } from "../store/triggers.js";
 import type { HostContext } from "./context.js";
+import { scheduleDryRun } from "./schedule-dry.js";
 import { canAutoStep, isTerminalStatus } from "./status.js";
 
 export const afterPersist = (
@@ -25,11 +26,15 @@ export const afterPersist = (
     startNextQueued(ctx, state.workflowId);
     return;
   }
-  const requests =
-    input.publish === "all"
-      ? requestedEffects(state)
-      : input.transition.effects;
-  scheduleRequests(ctx, state, requests);
+  if (state.mode === "dryRun") {
+    scheduleDryRun(ctx, state);
+  } else {
+    const requests =
+      input.publish === "all"
+        ? requestedEffects(state)
+        : input.transition.effects;
+    scheduleRequests(ctx, state, requests);
+  }
   if (canAutoStep(state, input.mode)) {
     void ctx.inbox.enqueue({ kind: "step", runId: state.runId });
   }
