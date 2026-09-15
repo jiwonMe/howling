@@ -8,6 +8,7 @@ import { loadStatus, type StatusSnapshot } from "../lib/status.js";
 import { buttonRecipe } from "../ui/button.css.js";
 import { iconMark } from "../ui/icon.css.js";
 import {
+  ChartLineOutline18,
   GaugeOutline18,
   HouseDashboard2Outline18,
   NodesOutline18,
@@ -64,6 +65,10 @@ export const AppShell = () => {
           <NavLink className={({ isActive }) => navLink({ active: isActive })} to="/flows">
             <NodesOutline18 aria-hidden className={iconMark} />
             플로
+          </NavLink>
+          <NavLink className={({ isActive }) => navLink({ active: isActive })} to="/analytics">
+            <ChartLineOutline18 aria-hidden className={iconMark} />
+            관측
           </NavLink>
         </nav>
         {session ? (

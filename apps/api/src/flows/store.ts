@@ -4,6 +4,7 @@
 import { randomUUID } from "node:crypto";
 import type { RevisionArtifact } from "@howling/contracts";
 import type pg from "pg";
+import { getDataPolicy } from "../data/store.js";
 import { artifactDigest } from "./digest.js";
 
 export const listFlows = async (pool: pg.Pool, siteId: string) => {
@@ -35,7 +36,10 @@ export const createFlow = async (pool: pg.Pool, siteId: string, name: string) =>
         nodes: [],
         edges: [],
       }),
-      JSON.stringify({ mode: "live", captureRaw: false }),
+      JSON.stringify({
+        mode: "live",
+        captureRaw: (await getDataPolicy(pool, siteId)).defaultCaptureRaw,
+      }),
     ],
   );
   await pool.query(

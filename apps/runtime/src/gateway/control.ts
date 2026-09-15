@@ -3,8 +3,11 @@
  */
 import { randomUUID } from "node:crypto";
 import {
+  desiredDataSchema,
   desiredDeploymentSchema,
+  detailRequestSchema,
   effectFixtureSchema,
+  oauthCodePayloadSchema,
   runCommandPayloadSchema,
   runStartPayloadSchema,
   summaryAckSchema,
@@ -16,7 +19,11 @@ import { createEngine, createOfficialRegistry } from "@howling/core";
 import type { RuntimeHost } from "../coordinator/host.js";
 import { activateArtifact } from "../deploy/activate.js";
 import { mergeFixtures } from "../coordinator/dry-fixtures.js";
-import { ackSummary } from "../store/summary-journal.js";
+import { answerDetail } from "../data/detail.js";
+import { applyCaptureGate } from "../data/publish-raw.js";
+import { putLocalPolicy } from "../data/policy.js";
+import { retainLocal } from "../data/retain.js";
+import { ackJournal } from "../store/sync-journal.js";
 import { sha256Json } from "../store/hash.js";
 import type { GatewayHandle } from "./client.js";
 
@@ -26,7 +33,26 @@ export const handleCloudControl = (
   host: RuntimeHost,
   gateway: GatewayHandle,
   envelope: RuntimeEnvelope,
+  extras?: { readonly onOauthCode?: (state: string, code: string) => void },
 ): void => {
+  try {
+    dispatchCloudControl(host, gateway, envelope, extras);
+  } catch {
+    // 한 제어 실패가 소켓 핸들러를 죽이지 않는다.
+  }
+};
+
+const dispatchCloudControl = (
+  host: RuntimeHost,
+  gateway: GatewayHandle,
+  envelope: RuntimeEnvelope,
+  extras?: { readonly onOauthCode?: (state: string, code: string) => void },
+): void => {
+  if (envelope.type === "oauth.code") {
+    const payload = oauthCodePayloadSchema.parse(envelope.payload);
+    extras?.onOauthCode?.(payload.state, payload.code);
+    return;
+  }
   if (envelope.type === "desired.deployment") {
     const payload = desiredDeploymentSchema.parse(envelope.payload);
     const result = activateArtifact(host.db, engine, {
@@ -44,8 +70,31 @@ export const handleCloudControl = (
     });
     return;
   }
-  if (envelope.type === "summary.ack") {
-    ackSummary(host.db, summaryAckSchema.parse(envelope.payload).syncSeq);
+  if (envelope.type === "desired.data") {
+    const payload = desiredDataSchema.parse(envelope.payload);
+    const change = putLocalPolicy(host.db, {
+      policy: payload.policy,
+      captureRaw: payload.captureRaw,
+      observations: payload.observations,
+    });
+    if (change.turnedOff) {
+      applyCaptureGate(host.db);
+    }
+    retainLocal(host.db);
+    return;
+  }
+  if (envelope.type === "detail.request") {
+    const payload = detailRequestSchema.parse(envelope.payload);
+    gateway.send("detail.response", answerDetail(host.db, payload));
+    return;
+  }
+  if (
+    envelope.type === "summary.ack" ||
+    envelope.type === "raw.ack" ||
+    envelope.type === "observe.ack"
+  ) {
+    const payload = summaryAckSchema.parse(envelope.payload);
+    ackJournal(host.db, payload.stream, payload.syncSeq);
     return;
   }
   if (envelope.type === "run.start") {

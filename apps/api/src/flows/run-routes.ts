@@ -4,19 +4,20 @@
 import {
   errorBody,
   errorCodes,
+  ownerPermissions,
   runCommandRequestSchema,
   startRunRequestSchema,
   testSessionRequestSchema,
 } from "@howling/contracts";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type pg from "pg";
-import { runtimeIdBySite, sendToRuntime } from "../runtime/hub.js";
+import { runtimeIdBySite } from "../runtime/hub.js";
 import { relayRunCommand } from "./commands.js";
 import { readRunEvents, sendEventStream } from "./events.js";
 import { presentRun } from "./present.js";
 import { getRun, listRuns } from "./runs.js";
-import { getFlow } from "./store.js";
-import { startTestSession } from "./test-session.js";
+import { startDryRun } from "./start-dry-run.js";
+import { startLiveRun } from "./start-live-run.js";
 
 type Gate = (
   request: FastifyRequest,
@@ -55,22 +56,13 @@ export const registerFlowRunRoutes = (
       return reply.code(400).send(errorBody(errorCodes.invalidRequest, "invalid run"));
     }
     const { flowId } = request.params as { flowId: string };
-    const flow = await getFlow(pool, member.siteId, flowId);
-    const revisionId = flow?.deployment?.revision_id;
-    if (!revisionId || flow?.deployment?.status !== "active") {
-      return reply.code(409).send(errorBody(errorCodes.invalidRequest, "no active deployment"));
-    }
-    const sent = sendToRuntime(member.siteId, "run.start", {
-      artifactId: revisionId,
+    const result = await startLiveRun(
+      pool,
+      { siteId: member.siteId, permissions: ownerPermissions },
       flowId,
-      input: parsed.data.input,
-      mode: parsed.data.mode,
-      idempotencyKey: parsed.data.idempotencyKey,
-    });
-    if (!sent) {
-      return reply.code(409).send(errorBody(errorCodes.runtimeOffline, "runtime offline"));
-    }
-    return reply.code(202).send({ accepted: true });
+      parsed.data,
+    );
+    return reply.code(result.status).send(result.body);
   });
 
   app.post("/api/v1/sites/:siteId/flows/:flowId/test-sessions", async (request, reply) => {
@@ -83,7 +75,12 @@ export const registerFlowRunRoutes = (
       return reply.code(400).send(errorBody(errorCodes.invalidRequest, "invalid test session"));
     }
     const { flowId } = request.params as { flowId: string };
-    const result = await startTestSession(pool, member.siteId, flowId, parsed.data);
+    const result = await startDryRun(
+      pool,
+      { siteId: member.siteId, permissions: ownerPermissions },
+      flowId,
+      parsed.data,
+    );
     return reply.code(result.status).send(result.body);
   });
 

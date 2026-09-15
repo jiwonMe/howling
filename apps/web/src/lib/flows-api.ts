@@ -65,6 +65,7 @@ export const saveDraft = (
     readonly definition: unknown;
     readonly triggers: unknown;
     readonly connections: unknown;
+    readonly executionPolicy?: { readonly mode: "live" | "dry-run"; readonly captureRaw: boolean };
   },
 ) =>
   ask<{ ok: true }>(`/api/v1/sites/${siteId}/flows/${flowId}/draft`, {
@@ -176,6 +177,66 @@ export const listRuns = (siteId: string, flowId?: string) =>
 export const getRun = (siteId: string, runId: string) =>
   ask<RunRow>(`/api/v1/sites/${siteId}/runs/${runId}`);
 
+export const startLiveRun = (
+  siteId: string,
+  flowId: string,
+  csrf: string,
+  input: unknown,
+) =>
+  ask<{ accepted: true }>(`/api/v1/sites/${siteId}/flows/${flowId}/runs`, {
+    method: "POST",
+    csrf,
+    body: JSON.stringify({
+      input,
+      mode: "auto",
+      idempotencyKey: `live-${Date.now()}`,
+    }),
+  });
+
+export const getConnections = (siteId: string) =>
+  ask<{
+    connections: {
+      ha?: { status?: string };
+      mcp?: {
+        status: string;
+        servers: {
+          id: string;
+          name: string;
+          status: string;
+          tools: { connectionId: string; tool: string; inputSchemaDigest: string; title?: string }[];
+        }[];
+      };
+    };
+  }>(`/api/v1/sites/${siteId}/connections`);
+
+export const listTokens = (siteId: string) =>
+  ask<{ tokens: TokenRow[] }>(`/api/v1/sites/${siteId}/tokens`);
+
+export const issueToken = (
+  siteId: string,
+  csrf: string,
+  body: { readonly name: string; readonly scopes: readonly string[]; readonly flowId?: string },
+) =>
+  ask<{ id: string; token: string }>(`/api/v1/sites/${siteId}/tokens`, {
+    method: "POST",
+    csrf,
+    body: JSON.stringify(body),
+  });
+
+export const revokeToken = (siteId: string, csrf: string, tokenId: string) =>
+  ask<{ ok: true }>(`/api/v1/sites/${siteId}/tokens/${tokenId}`, {
+    method: "DELETE",
+    csrf,
+  });
+
+export interface TokenRow {
+  readonly id: string;
+  readonly name: string;
+  readonly scopes: readonly string[];
+  readonly flowId: string | null;
+  readonly revokedAt: string | null;
+}
+
 export interface FlowListItem {
   readonly id: string;
   readonly name: string;
@@ -192,6 +253,7 @@ export interface FlowDetail {
     readonly definition: unknown;
     readonly triggers: unknown;
     readonly connections: unknown;
+    readonly executionPolicy?: { readonly mode: "live" | "dry-run"; readonly captureRaw: boolean };
   };
   readonly editor: {
     readonly version: number;

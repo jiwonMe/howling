@@ -12,6 +12,7 @@ export const helloEnvelope = (input: {
   readonly runtimeId: string;
   readonly siteId: string;
   readonly generation: number;
+  readonly connectors?: readonly string[];
 }): RuntimeEnvelope<HelloPayload> => ({
   protocolVersion: 1,
   messageId: randomUUID(),
@@ -21,7 +22,7 @@ export const helloEnvelope = (input: {
   type: "hello",
   payload: {
     protocolVersion: 1,
-    capabilities: { connectors: ["homeassistant"] },
+    capabilities: { connectors: [...(input.connectors ?? ["homeassistant"])] },
   },
 });
 

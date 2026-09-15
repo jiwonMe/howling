@@ -3,7 +3,7 @@
  */
 import type { SummaryBatch } from "./journal-types.js";
 import type pg from "pg";
-import { sendToRuntime } from "../runtime/hub.js";
+import { appendStreamRow } from "../data/streams.js";
 import { upsertRunSummary } from "./runs.js";
 
 export const appendSummaryBatch = async (
@@ -12,14 +12,15 @@ export const appendSummaryBatch = async (
   runtimeId: string,
   batch: SummaryBatch,
 ): Promise<void> => {
-  const inserted = await pool.query(
-    `INSERT INTO sync_journal
-       (runtime_id, stream, sync_seq, run_id, item_json, tombstone, created_at)
-     VALUES ($1, 'summary', $2, $3, $4::jsonb, false, now())
-     ON CONFLICT (runtime_id, stream, sync_seq) DO NOTHING`,
-    [runtimeId, batch.syncSeq, batch.runId, JSON.stringify(batch)],
-  );
-  if ((inserted.rowCount ?? 0) === 0) {
+  const inserted = await appendStreamRow(pool, {
+    siteId,
+    runtimeId,
+    stream: "summary",
+    syncSeq: batch.syncSeq,
+    runId: batch.runId,
+    item: batch,
+  });
+  if (!inserted) {
     return;
   }
   await upsertRunSummary(pool, siteId, {
@@ -36,7 +37,6 @@ export const appendSummaryBatch = async (
     })),
     ...(batch.runMode ? { runMode: batch.runMode } : {}),
   });
-  await ackConsecutive(pool, siteId, runtimeId);
 };
 
 export const listJournalAfter = async (
@@ -97,52 +97,4 @@ export const listJournalForRun = async (
     runtimeId: row.runtime_id,
     item: row.item_json,
   }));
-};
-
-const ackConsecutive = async (
-  pool: pg.Pool,
-  siteId: string,
-  runtimeId: string,
-): Promise<void> => {
-  await pool.query(
-    `INSERT INTO sync_cursors (runtime_id, stream, last_acked, min_seq)
-     VALUES ($1, 'summary', 0, 1)
-     ON CONFLICT (runtime_id, stream) DO NOTHING`,
-    [runtimeId],
-  );
-  const cursor = await pool.query<{ last_acked: string }>(
-    `SELECT last_acked FROM sync_cursors WHERE runtime_id = $1 AND stream = 'summary'`,
-    [runtimeId],
-  );
-  let last = Number(cursor.rows[0]?.last_acked ?? 0);
-  const pending = await pool.query<{ sync_seq: string }>(
-    `SELECT sync_seq FROM sync_journal
-     WHERE runtime_id = $1 AND stream = 'summary' AND sync_seq > $2
-     ORDER BY sync_seq`,
-    [runtimeId, last],
-  );
-  for (const row of pending.rows) {
-    const seq = Number(row.sync_seq);
-    if (seq !== last + 1) {
-      break;
-    }
-    last = seq;
-  }
-  if (last === Number(cursor.rows[0]?.last_acked ?? 0)) {
-    return;
-  }
-  await pool.query(
-    `UPDATE sync_journal SET acked_at = now()
-     WHERE runtime_id = $1 AND stream = 'summary' AND sync_seq <= $2 AND acked_at IS NULL`,
-    [runtimeId, last],
-  );
-  await pool.query(
-    `UPDATE sync_cursors SET last_acked = $2 WHERE runtime_id = $1 AND stream = 'summary'`,
-    [runtimeId, last],
-  );
-  sendToRuntime(siteId, "summary.ack", {
-    runtimeId,
-    stream: "summary",
-    syncSeq: last,
-  });
 };

@@ -7,8 +7,7 @@ import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { caption, header, page, section, sectionTitle, subtitle, title } from "../ui/layout.css.js";
 import { stat, statDetail, statLabel, statStrip, statValue } from "../ui/stat.css.js";
-import { tableCell, tableHead, tableHeadNumeric, tableCellNumeric, tableMono, tableWrap } from "../ui/table.css.js";
-import type { RunRow } from "../lib/flows-api.js";
+import { EventTable } from "../run/event-table.js";
 
 export const RunPage = () => {
   const { runId } = useParams<{ runId: string }>();
@@ -69,37 +68,13 @@ export const RunPage = () => {
       </p>
       <section className={section}>
         <h2 className={sectionTitle}>이벤트</h2>
-        <EventTable events={row.events} />
+        <EventTable
+          events={row.events}
+          runId={row.runId}
+          {...(csrf ? { csrf } : {})}
+          {...(siteId ? { siteId } : {})}
+        />
       </section>
     </div>
   );
 };
-
-const EventTable = (props: { readonly events: RunRow["events"] }) => (
-  <div className={tableWrap}>
-    <table>
-      <thead>
-        <tr>
-          <th className={tableHeadNumeric} scope="col">
-            Seq
-          </th>
-          <th className={tableHead} scope="col">
-            Type
-          </th>
-          <th className={tableHead} scope="col">
-            Node
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {props.events.map((event) => (
-          <tr key={event.sequence}>
-            <td className={tableCellNumeric}>{event.sequence}</td>
-            <td className={`${tableCell} ${tableMono}`}>{event.type}</td>
-            <td className={`${tableCell} ${tableMono}`}>{event.nodeId ?? ""}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);

@@ -1,13 +1,14 @@
 /**
  * 선택 노드 binding·trigger.
  */
-import type { InputBinding, JsonValue, WorkflowDefinition } from "@howling/core";
+import type { InputBinding, WorkflowDefinition } from "@howling/core";
 
 type NodeInstance = WorkflowDefinition["nodes"][number];
 import type { TriggerBinding } from "@howling/contracts";
 import { field, input, label } from "../ui/form.css.js";
 import { cardTitle } from "../ui/card.css.js";
 import { sidebar } from "../ui/editor.css.js";
+import { EffectFields, type McpToolOption } from "./effect-fields.js";
 import { TestPanel } from "./test-panel.js";
 
 export const Bindings = (props: {
@@ -18,6 +19,7 @@ export const Bindings = (props: {
   readonly onTriggers: (triggers: readonly TriggerBinding[]) => void;
   readonly testPower: string;
   readonly onTestPower: (value: string) => void;
+  readonly tools: readonly McpToolOption[];
 }) => {
   const node = props.definition.nodes.find((item) => item.id === props.selectedId);
   const trigger = props.triggers[0];
@@ -45,7 +47,7 @@ export const Bindings = (props: {
         />
       </label>
       {node ? (
-        <NodeFields inputId={inputId} node={node} onNode={props.onNode} />
+        <NodeFields inputId={inputId} node={node} onNode={props.onNode} tools={props.tools} />
       ) : (
         <p>노드를 선택하세요.</p>
       )}
@@ -57,6 +59,7 @@ const NodeFields = (props: {
   readonly inputId: string;
   readonly node: NodeInstance;
   readonly onNode: (node: NodeInstance) => void;
+  readonly tools: readonly McpToolOption[];
 }) => {
   const { node } = props;
   const setConfig = (key: string, value: number | string) =>
@@ -100,59 +103,8 @@ const NodeFields = (props: {
         />
       ) : null}
       {node.type === "core.effect" ? (
-        <EffectFields node={node} onNode={props.onNode} />
+        <EffectFields node={node} onNode={props.onNode} tools={props.tools} />
       ) : null}
-    </>
-  );
-};
-
-const EffectFields = (props: {
-  readonly node: NodeInstance;
-  readonly onNode: (node: NodeInstance) => void;
-}) => {
-  const request = effectRequest(props.node.inputs.request);
-  const data = request.service_data ?? {};
-  const set = (next: {
-    readonly domain?: string;
-    readonly service?: string;
-    readonly service_data?: { readonly entity_id?: string };
-  }) =>
-    props.onNode({
-      ...props.node,
-      inputs: {
-        ...props.node.inputs,
-        request: {
-          kind: "literal",
-          value: {
-            domain: next.domain ?? "",
-            service: next.service ?? "",
-            service_data: { entity_id: next.service_data?.entity_id ?? "" },
-          } satisfies JsonValue,
-        },
-      },
-    });
-  return (
-    <>
-      <TextField
-        label="domain"
-        testId="bind-domain"
-        value={String(request.domain ?? "")}
-        onChange={(domain) => set({ ...request, domain })}
-      />
-      <TextField
-        label="service"
-        testId="bind-service"
-        value={String(request.service ?? "")}
-        onChange={(service) => set({ ...request, service })}
-      />
-      <TextField
-        label="entity_id"
-        testId="bind-entity"
-        value={String(data.entity_id ?? "")}
-        onChange={(entity) =>
-          set({ ...request, service_data: { ...data, entity_id: entity } })
-        }
-      />
     </>
   );
 };
@@ -199,20 +151,3 @@ const literalNumber = (binding?: InputBinding): number =>
   binding && binding.kind === "literal" && typeof binding.value === "number"
     ? binding.value
     : 0;
-
-const effectRequest = (
-  binding?: InputBinding,
-): {
-  readonly domain?: string;
-  readonly service?: string;
-  readonly service_data?: { readonly entity_id?: string };
-} => {
-  if (!binding || binding.kind !== "literal" || !binding.value || typeof binding.value !== "object") {
-    return {};
-  }
-  return binding.value as {
-    readonly domain?: string;
-    readonly service?: string;
-    readonly service_data?: { readonly entity_id?: string };
-  };
-};

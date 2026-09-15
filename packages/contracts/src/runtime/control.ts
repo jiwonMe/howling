@@ -65,7 +65,7 @@ export const summaryBatchSchema = z.object({
 
 export const summaryAckSchema = z.object({
   runtimeId: z.string().min(1),
-  stream: z.literal("summary"),
+  stream: z.enum(["summary", "raw", "observe"]),
   syncSeq: z.number().int().positive(),
 });
 
@@ -90,4 +90,24 @@ export const connectionsSnapshotSchema = z.object({
     status: z.string(),
     lastSyncAt: z.string().nullable().optional(),
   }),
+  mcp: z
+    .object({
+      status: z.string(),
+      servers: z.array(
+        z.object({
+          id: z.string().min(1),
+          name: z.string().min(1),
+          status: z.string(),
+          tools: z.array(
+            z.object({
+              connectionId: z.string().min(1),
+              tool: z.string().min(1),
+              inputSchemaDigest: z.string().min(1),
+              title: z.string().optional(),
+            }),
+          ),
+        }),
+      ),
+    })
+    .optional(),
 });

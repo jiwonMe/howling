@@ -17,6 +17,7 @@ const fakeGateway = (sent: string[], open = { value: true }): GatewayHandle => (
   hold: () => undefined,
   release: () => undefined,
   setIdentity: () => undefined,
+  setConnectors: () => undefined,
 });
 
 describe("phase 3 summary journal", () => {

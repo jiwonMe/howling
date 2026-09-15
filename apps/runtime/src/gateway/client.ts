@@ -18,6 +18,7 @@ export interface GatewayHandle {
     readonly runtimeId: string;
     readonly siteId: string;
   }) => void;
+  readonly setConnectors: (connectors: readonly string[]) => void;
 }
 
 export const startRuntimeGateway = (
@@ -39,6 +40,7 @@ export const startRuntimeGateway = (
     runtimeId: config.runtimeId,
     siteId: config.siteId,
   };
+  let connectors = ["homeassistant"];
 
   const connect = () => {
     if (stopped || !identity.token) {
@@ -54,10 +56,15 @@ export const startRuntimeGateway = (
             runtimeId: identity.runtimeId,
             siteId: identity.siteId,
             generation,
+            connectors,
           }),
         ),
       );
-      onReady?.();
+      try {
+        onReady?.();
+      } catch {
+        // flush 실패가 heartbeat를 막으면 안 된다.
+      }
       heartbeat = setInterval(() => {
         if (current.readyState === WebSocket.OPEN) {
           current.send(
@@ -143,6 +150,9 @@ export const startRuntimeGateway = (
         return;
       }
       connect();
+    },
+    setConnectors: (next) => {
+      connectors = [...next];
     },
   };
 };

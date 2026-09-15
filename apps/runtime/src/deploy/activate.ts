@@ -4,6 +4,7 @@
 import { NODE_CATALOG_VERSION, type RevisionArtifact } from "@howling/contracts";
 import type { HowlingEngine } from "@howling/core";
 import type Database from "better-sqlite3";
+import { assertMcpReady } from "../mcp/deploy.js";
 import { activatePointer, getDeployment, nextStateEpoch, storeArtifact } from "../store/artifacts.js";
 
 export const activateArtifact = (
@@ -30,6 +31,10 @@ export const activateArtifact = (
   if (input.artifact.requirements.nodeCatalogVersion !== NODE_CATALOG_VERSION) {
     return { status: "failed", error: "node catalog mismatch" };
   }
+  const mcpError = assertMcpReady(db, input.artifact);
+  if (mcpError) {
+    return { status: "failed", error: mcpError };
+  }
   const compiled = engine.compile(input.artifact.definition);
   if (!compiled.ok) {
     return {
@@ -42,6 +47,7 @@ export const activateArtifact = (
     definition: input.artifact.definition,
     triggers: input.artifact.triggers,
     connections: input.artifact.connections,
+    executionPolicy: input.artifact.executionPolicy,
   });
   activatePointer(db, {
     flowId: input.artifact.flowId,

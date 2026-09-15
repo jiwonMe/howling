@@ -4,6 +4,8 @@
 import {
   errorBody,
   errorCodes,
+  haStatusSchema,
+  mcpSnapshotSchema,
   ownerPermissions,
   runtimeStatusSchema,
   siteListSchema,
@@ -79,7 +81,13 @@ export const registerSiteRoutes = (
         ha: { status: "not_configured" },
       });
     }
-    const caps = row.capabilities as { ha?: { status?: string; lastSyncAt?: string | null } } | null;
+    const caps = row.capabilities as {
+      ha?: { status?: string; lastSyncAt?: string | null };
+      mcp?: unknown;
+    } | null;
+    const haStatus = haStatusSchema.safeParse(caps?.ha?.status);
+    const lastSyncAt = datetimeOrNull(caps?.ha?.lastSyncAt);
+    const mcp = mcpSnapshotSchema.safeParse(caps?.mcp);
     return runtimeStatusSchema.parse({
       siteId: row.site_id,
       runtimeId: row.runtime_id,
@@ -89,12 +97,23 @@ export const registerSiteRoutes = (
       lastSeenAt: row.last_seen_at ? row.last_seen_at.toISOString() : null,
       capabilities: row.capabilities,
       ha: {
-        status: caps?.ha?.status ?? "not_configured",
-        ...(caps?.ha?.lastSyncAt === undefined
-          ? {}
-          : { lastSyncAt: caps.ha.lastSyncAt }),
+        status: haStatus.success ? haStatus.data : "not_configured",
+        ...(lastSyncAt === undefined ? {} : { lastSyncAt }),
       },
+      ...(mcp.success ? { mcp: mcp.data } : {}),
     });
-
   });
+};
+
+const datetimeOrNull = (value: unknown): string | null | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(value)) {
+    return value;
+  }
+  return undefined;
 };

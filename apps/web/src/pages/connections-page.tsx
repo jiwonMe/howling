@@ -3,8 +3,11 @@
  */
 import { useEffect, useState } from "react";
 import { loginHref, UnauthorizedError } from "../lib/api.js";
-import { haStatus, runtimeDetail } from "../lib/dashboard.js";
+import { haStatus, mcpStatus, mcpToolCount, runtimeDetail } from "../lib/dashboard.js";
 import { pairRuntime } from "../lib/flows-api.js";
+import { DataPolicyPanel } from "./data-policy-panel.js";
+import { OauthPanel } from "./oauth-panel.js";
+import { TokensPanel } from "./tokens-panel.js";
 import { loadStatus, type StatusSnapshot } from "../lib/status.js";
 import { buttonRecipe } from "../ui/button.css.js";
 import { iconMark } from "../ui/icon.css.js";
@@ -63,13 +66,17 @@ export const ConnectionsPage = () => {
         Pairing code로 이 site에 로컬 runtime을 묶습니다. Home Assistant secret은 runtime에만
         있습니다.
       </p>
-      <section className={statStrip({ columns: "two" })}>
+      <section className={statStrip({ columns: "three" })}>
         <article className={stat}>
           <p className={statLabel}>Runtime</p>
           <p className={statValue({ online: data.runtime.online })} data-testid="runtime-online">
             {data.runtime.online ? "online" : "offline"}
           </p>
-          <p className={statDetail}>{runtimeDetail(data.runtime)}</p>
+          <p className={statDetail} data-testid="runtime-sync">
+            {data.runtime.ha.lastSyncAt
+              ? `HA sync ${data.runtime.ha.lastSyncAt}`
+              : runtimeDetail(data.runtime)}
+          </p>
         </article>
         <article className={stat}>
           <p className={statLabel}>Home Assistant</p>
@@ -77,6 +84,15 @@ export const ConnectionsPage = () => {
             {ha}
           </p>
           <p className={statDetail}>Secret은 로컬 runtime setup에만 있습니다.</p>
+        </article>
+        <article className={stat}>
+          <p className={statLabel}>MCP</p>
+          <p className={statValue({ online: mcpStatus(data.runtime) === "ready" })} data-testid="mcp-status">
+            {mcpStatus(data.runtime)}
+          </p>
+          <p className={statDetail} data-testid="mcp-tools">
+            tools {String(mcpToolCount(data.runtime))}
+          </p>
         </article>
       </section>
       <form
@@ -108,6 +124,9 @@ export const ConnectionsPage = () => {
           </button>
           {message ? <p className={errorText}>{message}</p> : null}
         </form>
+      <DataPolicyPanel csrf={data.user.csrfToken} siteId={data.site.id} />
+      <OauthPanel />
+      <TokensPanel csrf={data.user.csrfToken} siteId={data.site.id} />
     </div>
   );
 };

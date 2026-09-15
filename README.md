@@ -12,7 +12,7 @@ Home Assistant를 노드로 자동화하는 제품입니다. 브라우저에서 
 - 실행 상세 5초 polling
 - `https://howling.test` E2E (테스트 CA는 Playwright 컨테이너만 신뢰)
 
-아직 없는 것: dry-run UI, 실행 요약 SSE, MCP, rollback UI, HA OS 앱, 관측 차트.
+아직 없는 것: 호스트에 테스트 CA 설치, 플러그인 마켓.
 
 ## 로컬 개발
 
@@ -43,9 +43,10 @@ pnpm test:e2e
 | 경로 | 내용 |
 | --- | --- |
 | `/` | API·runtime·HA 상태 |
-| `/connections` | pairing code, runtime online, HA ready |
+| `/connections` | pairing, HA·MCP, 원본 전송·보관, OAuth 제공자, scoped token |
 | `/flows` | 초안·배포 목록 |
 | `/flows/:flowId` | 편집기 |
 | `/runs/:runId` | 실행 상세 |
+| `/analytics` | 관측 차트·필드 선택 |
 
 로컬 runtime setup 페이지는 `http://127.0.0.1:4000/setup`입니다. HA 토큰은 클라우드에 올리지 않습니다.

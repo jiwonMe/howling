@@ -9,6 +9,7 @@ export const presentFlow = (row: {
     readonly definition_json: unknown;
     readonly triggers_json: unknown;
     readonly connections_json: unknown;
+    readonly execution_policy_json?: unknown;
   };
   readonly editor?: {
     readonly version: number;
@@ -30,6 +31,7 @@ export const presentFlow = (row: {
     definition: row.draft.definition_json,
     triggers: row.draft.triggers_json,
     connections: row.draft.connections_json,
+    executionPolicy: row.draft.execution_policy_json ?? { mode: "live", captureRaw: false },
   },
   editor: {
     version: row.editor?.version ?? 1,

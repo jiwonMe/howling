@@ -14,10 +14,19 @@ import { createFakeAdapter } from "./effects/fake-adapter.js";
 import { handleCloudControl } from "./gateway/control.js";
 import { startRuntimeGateway } from "./gateway/client.js";
 import { flushUnackedSummaries, publishRunSummary } from "./gateway/summary.js";
+import { applyCaptureGate, flushUnackedRaw, publishRunRaw } from "./data/publish-raw.js";
+import { retainLocal } from "./data/retain.js";
+import { flushUnackedObserve, tickObserver } from "./observe/tick.js";
+import { resolveHaEndpoint } from "./ha/supervisor.js";
 import { createHaAwareAdapter } from "./ha/adapter.js";
 import { startHaConnector, type HaHandle } from "./ha/client.js";
 import { createHaCallLog } from "./ha/hooks.js";
 import { dispatchHaTriggers } from "./ha/triggers.js";
+import { createMcpAwareAdapter } from "./mcp/adapter.js";
+import { finishMcpOauth, pendingOauthByState } from "./mcp/oauth.js";
+import { createMcpRegistry } from "./mcp/registry.js";
+import { reportConnections } from "./mcp/report.js";
+import { listConnections } from "./mcp/store.js";
 import { readSecret } from "./secrets/store.js";
 import { createPairingState } from "./setup/pairing.js";
 import { readRuntimeToken } from "./token.js";
@@ -37,47 +46,76 @@ upsertIdentity(db, { ...config, runtimeId: session.runtimeId, siteId: session.si
 
 const haLog = createHaCallLog();
 let ha: HaHandle | undefined;
-const host = createRuntimeHost({
-  db,
-  adapter: createHaAwareAdapter({
+const mcpRegistry = createMcpRegistry(db, config.secretRoot);
+const adapter = createMcpAwareAdapter({
+  next: createHaAwareAdapter({
     fake: createFakeAdapter(),
     ha: () => ha,
     testHooks: config.testHooks,
   }),
+  registry: () => mcpRegistry,
 });
+const host = createRuntimeHost({ db, adapter });
 
 const gateway = startRuntimeGateway(
   { ...config, runtimeId: session.runtimeId, siteId: session.siteId },
   session.token,
   undefined,
   (envelope) => {
-    handleCloudControl(host, gateway, envelope);
+    handleCloudControl(host, gateway, envelope, {
+      onOauthCode: (state, code) => {
+        void acceptOauthCode(state, code);
+      },
+    });
   },
   () => {
+    applyCaptureGate(host.db);
     flushUnackedSummaries(host, gateway);
+    flushUnackedRaw(host.db, gateway);
+    flushUnackedObserve(host.db, gateway);
   },
 );
 
-const reportHa = (status: HaStatus) => {
-  gateway.send("connections.snapshot", {
-    ha: { status, lastSyncAt: ha?.lastSyncAt() ?? null },
-  });
+const reportAll = (status?: HaStatus) => {
+  reportConnections(
+    gateway,
+    { status: status ?? ha?.status() ?? "not_configured", lastSyncAt: ha?.lastSyncAt() ?? null },
+    mcpRegistry.snapshot(),
+  );
 };
 
 const startHa = () => {
   ha?.stop();
-  const url = readSecret(config.secretRoot, "ha-url");
-  const token = readSecret(config.secretRoot, "ha-token");
-  if (!url || !token) {
+  const endpoint = resolveHaEndpoint({
+    ...(process.env.SUPERVISOR_TOKEN ? { supervisorToken: process.env.SUPERVISOR_TOKEN } : {}),
+    url: readSecret(config.secretRoot, "ha-url"),
+    token: readSecret(config.secretRoot, "ha-token"),
+  });
+  if (!endpoint) {
     return;
   }
   ha = startHaConnector({
-    url,
-    token,
-    onStatus: reportHa,
+    url: endpoint.url,
+    token: endpoint.token,
+    ...(endpoint.websocketPath ? { websocketPath: endpoint.websocketPath } : {}),
+    onStatus: reportAll,
     onEvent: (event) => dispatchHaTriggers(host, event, false),
     onCall: haLog.record,
   });
+};
+
+const acceptOauthCode = async (state: string, code: string): Promise<void> => {
+  const ids = listConnections(db, "mcp").map((row) => row.id);
+  const pending = pendingOauthByState(config.secretRoot, ids, state);
+  if (!pending) {
+    return;
+  }
+  const ok = await finishMcpOauth(config.secretRoot, pending.connectionId, state, code);
+  if (!ok) {
+    return;
+  }
+  await mcpRegistry.reload();
+  reportAll();
 };
 
 host.afterCommit = (hint) => {
@@ -86,6 +124,12 @@ host.afterCommit = (hint) => {
   } catch {
     // 요약 전송 실패는 실행을 멈추지 않는다.
   }
+  try {
+    publishRunRaw(host.db, gateway, hint.runId);
+  } catch {
+    // raw 실패는 summary를 막지 않는다.
+  }
+  tickObserver(host.db, gateway);
   return "continue";
 };
 
@@ -104,25 +148,32 @@ const pairingDeps = {
 
 host.recover();
 await host.waitIdle();
+await mcpRegistry.reload();
 startHa();
-setInterval(() => {
-  if (ha) {
-    reportHa(ha.status());
-  }
-}, 5000);
+reportAll();
+retainLocal(host.db);
+setInterval(() => reportAll(), 5000);
+setInterval(() => retainLocal(host.db), 60_000);
 
 const app = createRuntimeApp(db, host, {
   secretRoot: config.secretRoot,
   pairing,
   pairingDeps,
   onHaSaved: startHa,
-  ...(config.testHooks ? { hooks: haLog, gateway } : {}),
+  mcp: {
+    registry: mcpRegistry,
+    siteId: () => session.siteId,
+    apiHttpUrl: config.apiHttpUrl,
+    onChanged: () => reportAll(),
+  },
+  ...(config.testHooks ? { hooks: haLog, gateway, adapterCalls: adapter.calls } : {}),
 });
 await app.listen({ host: config.listenHost, port: config.listenPort });
 
 const shutdown = () => {
   host.stop();
   ha?.stop();
+  void mcpRegistry.stop();
   gateway.stop();
   void app.close().then(() => db.close());
 };

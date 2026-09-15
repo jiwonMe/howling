@@ -20,7 +20,7 @@ Pairing 전에는 배포·실행 command를 거절합니다.
 http://127.0.0.1:4000/setup
 ```
 
-이 페이지에서 HA URL·long-lived token을 저장하고 Pairing 시작을 누릅니다. 토큰은 `data/secrets/ha-token`에 mode `0600`으로 씁니다. 클라우드 Connections 화면은 metadata와 code 입력만 있습니다. secret 재조회 API는 없습니다.
+이 페이지에서 HA URL·long-lived token을 저장하고 Pairing 시작을 누릅니다. 토큰은 `data/secrets/ha-token`에 mode `0600`으로 씁니다. HA OS 앱은 `SUPERVISOR_TOKEN`이 있으면 `http://supervisor/core`를 쓰고 URL을 다시 넣지 않습니다. 클라우드 Connections 화면은 metadata와 code 입력만 있습니다. secret 재조회 API는 없습니다.
 
 ## curl로 pairing
 

@@ -8,6 +8,30 @@ import {
 } from "@howling/contracts";
 import { artifactDigest } from "./digest.js";
 
+export const connectorsOf = (input: {
+  readonly definition: { readonly nodes?: readonly { readonly config?: { readonly adapter?: string } }[] };
+  readonly connections: RevisionArtifact["connections"];
+}): string[] => {
+  const found = new Set<string>();
+  for (const item of input.connections) {
+    if (item.kind === "ha") {
+      found.add("homeassistant");
+    }
+    if (item.kind === "mcp") {
+      found.add("mcp");
+    }
+  }
+  for (const node of input.definition.nodes ?? []) {
+    if (node.config?.adapter === "homeassistant") {
+      found.add("homeassistant");
+    }
+    if (node.config?.adapter === "mcp") {
+      found.add("mcp");
+    }
+  }
+  return found.size > 0 ? [...found] : ["homeassistant"];
+};
+
 export const artifactFromDraft = (input: {
   readonly siteId: string;
   readonly flowId: string;
@@ -26,7 +50,12 @@ export const artifactFromDraft = (input: {
   const requirements = {
     protocolVersion: 1 as const,
     nodeCatalogVersion: NODE_CATALOG_VERSION,
-    connectors: ["homeassistant"] as const,
+    connectors: connectorsOf({
+      definition: definition as unknown as {
+        readonly nodes?: readonly { readonly config?: { readonly adapter?: string } }[];
+      },
+      connections: input.connections,
+    }),
   };
   return {
     schemaVersion: 1,

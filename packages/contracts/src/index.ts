@@ -27,6 +27,29 @@ export {
 } from "./runtime-status.js";
 export type { HaStatus, RuntimeStatus } from "./runtime-status.js";
 export {
+  issueTokenRequestSchema,
+  issuedTokenSchema,
+  tokenListItemSchema,
+  tokenListSchema,
+} from "./tokens.js";
+export type { IssueTokenRequest, IssuedToken, TokenListItem } from "./tokens.js";
+export {
+  MCP_TOOL_SCOPES,
+  mcpEffectInputSchema,
+  mcpLocalSetupSchema,
+  mcpServerSnapshotSchema,
+  mcpSnapshotSchema,
+  mcpToolCatalogItemSchema,
+  oauthCodePayloadSchema,
+} from "./mcp.js";
+export type {
+  McpEffectInput,
+  McpLocalSetup,
+  McpSnapshot,
+  McpToolCatalogItem,
+  OauthCodePayload,
+} from "./mcp.js";
+export {
   pairingClaimRequestSchema,
   pairingClaimResponseSchema,
   pairingCompleteResponseSchema,
@@ -92,6 +115,41 @@ export type {
 } from "./runtime/connect.js";
 export { reservedRuntimeMessageTypes } from "./runtime/types.js";
 export type { ReservedRuntimeMessageType } from "./runtime/types.js";
+export {
+  DEFAULT_DATA_POLICY,
+  GIB,
+  MCP_OAUTH_PRESETS,
+  analyticsSnapshotSchema,
+  detailRequestBodySchema,
+  observationFieldSchema,
+  observationSpecSchema,
+  observeSampleSchema,
+  siteDataPolicySchema,
+} from "./data.js";
+export type {
+  AnalyticsSnapshot,
+  ObservationField,
+  ObservationSpec,
+  ObserveSample,
+  SiteDataPolicy,
+} from "./data.js";
+export {
+  desiredDataSchema,
+  detailRequestSchema,
+  detailResponseSchema,
+  observeBatchSchema,
+  rawBatchSchema,
+  streamAckSchema,
+  syncStreamSchema,
+} from "./runtime/streams.js";
+export type {
+  DesiredData,
+  DetailRequest,
+  DetailResponse,
+  ObserveBatch,
+  RawBatch,
+  SyncStream,
+} from "./runtime/streams.js";
 export type {
   ConnectionBinding,
   EditorDocument,

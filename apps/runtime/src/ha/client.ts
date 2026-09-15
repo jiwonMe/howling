@@ -25,6 +25,7 @@ export interface HaHandle {
 export interface HaConnectorInput {
   readonly url: string;
   readonly token: string;
+  readonly websocketPath?: string;
   readonly onStatus: (status: HaStatus) => void;
   readonly onEvent: (event: HaEvent) => void;
   readonly onCall?: (call: { id: number; domain: string; service: string }) => void;
@@ -87,7 +88,8 @@ export const startHaConnector = (input: HaConnectorInput): HaHandle => {
     setStatus(status === "ready" ? "reconnecting" : "connecting");
     snapshotDone = false;
     subscribed = false;
-    const wsUrl = input.url.replace(/^http/, "ws").replace(/\/$/, "") + "/api/websocket";
+    const wsUrl =
+      input.url.replace(/^http/, "ws").replace(/\/$/, "") + (input.websocketPath ?? "/api/websocket");
     const current = new WebSocket(wsUrl);
     socket = current;
     current.on("message", (raw) => {

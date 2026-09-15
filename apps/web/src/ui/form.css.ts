@@ -30,6 +30,14 @@ export const formStack = style({
   maxWidth: "28rem",
 });
 
+export const select = style({
+  borderRadius: vars.radius.md,
+  border: `1px solid ${vars.color.borderStrong}`,
+  backgroundColor: vars.color.bg,
+  color: vars.color.text,
+  padding: `${vars.space.sm} ${vars.space.md}`,
+});
+
 export const errorText = style({
   color: vars.color.error,
   fontSize: vars.font.sm,

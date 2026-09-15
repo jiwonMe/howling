@@ -1,9 +1,12 @@
 /**
  * 시드 artifact와 활성 revision 포인터.
  */
+import type { ExecutionPolicy } from "@howling/contracts";
 import type { WorkflowDefinition } from "@howling/core";
 import type Database from "better-sqlite3";
 import { sha256Json } from "./hash.js";
+
+const defaultPolicy: ExecutionPolicy = { mode: "live", captureRaw: false };
 
 export interface StoredArtifact {
   readonly id: string;
@@ -11,6 +14,7 @@ export interface StoredArtifact {
   readonly revision: string;
   readonly definition: WorkflowDefinition;
   readonly digest: string;
+  readonly executionPolicy: ExecutionPolicy;
 }
 
 export const storeArtifact = (
@@ -20,18 +24,21 @@ export const storeArtifact = (
     readonly definition: WorkflowDefinition;
     readonly triggers?: unknown;
     readonly connections?: unknown;
+    readonly executionPolicy?: ExecutionPolicy;
   },
 ): StoredArtifact => {
   const digest = sha256Json(input.definition);
+  const executionPolicy = input.executionPolicy ?? defaultPolicy;
   db.prepare(
     `INSERT INTO revision_artifacts
-       (id, flow_id, revision, definition_json, digest, created_at, triggers_json, connections_json)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       (id, flow_id, revision, definition_json, digest, created_at, triggers_json, connections_json, execution_policy_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT (id) DO UPDATE SET
        definition_json = excluded.definition_json,
        digest = excluded.digest,
        triggers_json = excluded.triggers_json,
-       connections_json = excluded.connections_json`,
+       connections_json = excluded.connections_json,
+       execution_policy_json = excluded.execution_policy_json`,
   ).run(
     input.id,
     input.definition.id,
@@ -41,6 +48,7 @@ export const storeArtifact = (
     new Date().toISOString(),
     JSON.stringify(input.triggers ?? []),
     JSON.stringify(input.connections ?? []),
+    JSON.stringify(executionPolicy),
   );
   return {
     id: input.id,
@@ -48,6 +56,7 @@ export const storeArtifact = (
     revision: input.definition.revision,
     definition: input.definition,
     digest,
+    executionPolicy,
   };
 };
 
@@ -91,6 +100,7 @@ export const upsertArtifact = (
     readonly definition: WorkflowDefinition;
     readonly triggers?: unknown;
     readonly connections?: unknown;
+    readonly executionPolicy?: ExecutionPolicy;
     readonly generation?: number;
     readonly activate?: boolean;
     readonly stateEpoch?: string;
@@ -115,7 +125,7 @@ export const getArtifact = (
 ): StoredArtifact | undefined => {
   const row = db
     .prepare(
-      `SELECT id, flow_id, revision, definition_json, digest
+      `SELECT id, flow_id, revision, definition_json, digest, execution_policy_json
        FROM revision_artifacts WHERE id = ?`,
     )
     .get(id) as
@@ -125,6 +135,7 @@ export const getArtifact = (
         revision: string;
         definition_json: string;
         digest: string;
+        execution_policy_json?: string;
       }
     | undefined;
   if (!row) {
@@ -136,6 +147,9 @@ export const getArtifact = (
     revision: row.revision,
     definition: JSON.parse(row.definition_json) as WorkflowDefinition,
     digest: row.digest,
+    executionPolicy: row.execution_policy_json
+      ? (JSON.parse(row.execution_policy_json) as ExecutionPolicy)
+      : defaultPolicy,
   };
 };
 
@@ -165,7 +179,7 @@ export const listActiveArtifacts = (
 ): { artifact: StoredArtifact; triggers: unknown }[] => {
   const rows = db
     .prepare(
-      `SELECT a.id, a.flow_id, a.revision, a.definition_json, a.digest, a.triggers_json
+      `SELECT a.id, a.flow_id, a.revision, a.definition_json, a.digest, a.triggers_json, a.execution_policy_json
        FROM revision_artifacts a
        JOIN active_deployments d ON d.artifact_id = a.id`,
     )
@@ -176,6 +190,7 @@ export const listActiveArtifacts = (
     definition_json: string;
     digest: string;
     triggers_json: string;
+    execution_policy_json?: string;
   }[];
   return rows.map((row) => ({
     artifact: {
@@ -184,6 +199,9 @@ export const listActiveArtifacts = (
       revision: row.revision,
       definition: JSON.parse(row.definition_json) as WorkflowDefinition,
       digest: row.digest,
+      executionPolicy: row.execution_policy_json
+        ? (JSON.parse(row.execution_policy_json) as ExecutionPolicy)
+        : defaultPolicy,
     },
     triggers: JSON.parse(row.triggers_json) as unknown,
   }));

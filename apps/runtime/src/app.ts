@@ -11,6 +11,9 @@ import { registerHookRoutes } from "./http/hooks.js";
 import { registerRunRoutes } from "./http/run-routes.js";
 import { registerSetupRoutes } from "./setup/routes.js";
 import type { PairingDeps, PairingState } from "./setup/pairing.js";
+import type { McpRegistry } from "./mcp/registry.js";
+import { registerMcpSetupRoutes } from "./mcp/setup.js";
+import type { AdapterCall } from "./effects/fake-adapter.js";
 
 export const createRuntimeApp = (
   db: Database.Database,
@@ -22,6 +25,13 @@ export const createRuntimeApp = (
     readonly onHaSaved?: () => void;
     readonly hooks?: HaCallLog;
     readonly gateway?: GatewayHandle;
+    readonly mcp?: {
+      readonly registry: McpRegistry;
+      readonly siteId: () => string;
+      readonly apiHttpUrl: string;
+      readonly onChanged: () => void;
+    };
+    readonly adapterCalls?: AdapterCall[];
   },
 ): FastifyInstance => {
   const app = Fastify({ logger: false });
@@ -37,8 +47,18 @@ export const createRuntimeApp = (
       onHaSaved: extras.onHaSaved,
     });
   }
+  if (extras?.secretRoot && extras.mcp) {
+    registerMcpSetupRoutes(app, {
+      db,
+      secretRoot: extras.secretRoot,
+      siteId: extras.mcp.siteId,
+      apiHttpUrl: extras.mcp.apiHttpUrl,
+      registry: extras.mcp.registry,
+      onChanged: extras.mcp.onChanged,
+    });
+  }
   if (extras?.hooks) {
-    registerHookRoutes(app, extras.hooks, extras.gateway);
+    registerHookRoutes(app, extras.hooks, extras.gateway, extras.adapterCalls);
   }
   return app;
 };

@@ -41,9 +41,16 @@ services:
 
   mcp:
     profiles: ["e2e"]
-    image: alpine:3.20
-    command: ["true"]
-    restart: "no"
+    build:
+      context: ../..
+      dockerfile: infra/e2e/Dockerfile.apps
+      target: mcp-test
+    environment:
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: "8091"
+      MCP_TOKEN: test-mcp-token
+    ports:
+      - "8091:8091"
 
   tls-gateway:
     profiles: ["e2e"]

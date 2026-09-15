@@ -17,6 +17,9 @@ Howling은 Home Assistant를 이용한 시각적 자동화 플랫폼입니다. �
 4. [Pairing과 HA](./product/03-pairing-and-ha.md) — 로컬 setup, secret, 준비 상태
 5. [편집기와 실행](./product/04-editor-and-runs.md) — 초안, revision, 배포, run
 6. [E2E](./product/05-e2e.md) — `howling.test`, 테스트 CA, 전력 평균 시나리오
+7. [Dry-run](./product/06-dry-run.md)
+8. [MCP](./product/07-mcp.md)
+9. [관측·원본·설치](./product/08-analytics-and-data.md)
 
 ## Core 자습서
 

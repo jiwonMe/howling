@@ -3,9 +3,11 @@
  */
 import { officialCatalog, type CatalogNode } from "@howling/contracts";
 import type { WorkflowDefinition } from "@howling/core";
+import { connectEdge, repairEdges, sourcePort } from "./flow-edges.js";
+
+export { sourcePort } from "./flow-edges.js";
 
 type NodeInstance = WorkflowDefinition["nodes"][number];
-type ControlEdge = WorkflowDefinition["edges"][number];
 
 export const catalogOf = (type: string): CatalogNode | undefined =>
   officialCatalog.find((item) => item.type === type);
@@ -84,7 +86,7 @@ export const defaultNode = (type: string, id: string, nodes: readonly NodeInstan
 
 export const repairBindings = (definition: WorkflowDefinition): WorkflowDefinition => {
   const ids = new Set(definition.nodes.map((node) => node.id));
-  return {
+  return repairEdges({
     ...definition,
     nodes: definition.nodes.map((node) => ({
       ...node,
@@ -118,11 +120,8 @@ export const repairBindings = (definition: WorkflowDefinition): WorkflowDefiniti
         }),
       ),
     })),
-  };
+  });
 };
-
-export const sourcePort = (type: string): string =>
-  type === "core.condition" ? "true" : "success";
 
 export const addNode = (
   definition: WorkflowDefinition,
@@ -130,25 +129,21 @@ export const addNode = (
 ): { definition: WorkflowDefinition; nodeId: string } => {
   const nodeId = nextNodeId(type, definition.nodes);
   const node = defaultNode(type, nodeId, definition.nodes);
+  const withNode: WorkflowDefinition = {
+    ...definition,
+    entryNodeId: definition.nodes[0]?.id ?? nodeId,
+    nodes: [...definition.nodes, node],
+  };
   const previous = definition.nodes.at(-1);
-  const edges = previous
-    ? [
-        ...definition.edges,
-        {
-          id: `e-${previous.id}-${nodeId}`,
-          source: { nodeId: previous.id, port: sourcePort(previous.type) },
-          target: { nodeId, port: "in" },
-        } satisfies ControlEdge,
-      ]
-    : definition.edges;
   return {
     nodeId,
-    definition: {
-      ...definition,
-      entryNodeId: definition.nodes[0]?.id ?? nodeId,
-      nodes: [...definition.nodes, node],
-      edges,
-    },
+    definition: previous
+      ? connectEdge(withNode, {
+          sourceId: previous.id,
+          sourcePort: sourcePort(previous.type),
+          targetId: nodeId,
+        })
+      : withNode,
   };
 };
 
@@ -166,3 +161,25 @@ export const replaceNode = (
 export const defaultPosition = (
   index: number,
 ): { x: number; y: number } => ({ x: index * 220, y: 80 });
+
+export const draftConnections = (
+  definition: WorkflowDefinition,
+): { id: string; kind: "ha" | "mcp"; connectionId: string }[] => {
+  const connections: { id: string; kind: "ha" | "mcp"; connectionId: string }[] = [
+    { id: "ha", kind: "ha", connectionId: "ha" },
+  ];
+  for (const node of definition.nodes) {
+    if (node.type !== "core.effect" || node.config.adapter !== "mcp") {
+      continue;
+    }
+    const binding = node.inputs.request;
+    if (!binding || binding.kind !== "literal" || !binding.value || typeof binding.value !== "object") {
+      continue;
+    }
+    const connectionId = (binding.value as { connectionId?: string }).connectionId;
+    if (connectionId && !connections.some((item) => item.connectionId === connectionId)) {
+      connections.push({ id: connectionId, kind: "mcp", connectionId });
+    }
+  }
+  return connections;
+};

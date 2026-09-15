@@ -11,6 +11,11 @@ export const haStatus = (runtime: RuntimeStatus): string => {
   return (runtime.ha as { status?: string }).status ?? "not_configured";
 };
 
+export const mcpStatus = (runtime: RuntimeStatus): string => runtime.mcp?.status ?? "not_configured";
+
+export const mcpToolCount = (runtime: RuntimeStatus): number =>
+  runtime.mcp?.servers.reduce((sum, server) => sum + server.tools.length, 0) ?? 0;
+
 export const siteClaim = (
   data: StatusSnapshot,
 ): { readonly title: string; readonly detail: string } => {

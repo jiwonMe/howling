@@ -24,6 +24,7 @@ import {
 } from "./registry.js";
 import { attachRuntime, detachRuntime } from "./hub.js";
 import { handleRuntimeControl } from "./inbound.js";
+import { pushDesiredData } from "../data/push.js";
 
 interface LiveSocket {
   socket: WebSocket;
@@ -136,6 +137,7 @@ const handleMessage = async (
         connectors: payload.capabilities.connectors,
       }),
     });
+    await pushDesiredData(pool, identity.siteId);
     return;
   }
   if (envelope.type === "heartbeat") {

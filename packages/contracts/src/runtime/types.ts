@@ -15,13 +15,17 @@ export const reservedRuntimeMessageTypes = [
   "run.resume",
   "run.cancel",
   "connections.snapshot",
+  "oauth.code",
   "catalog.snapshot",
   "summary.batch",
   "summary.ack",
   "raw.batch",
   "raw.ack",
+  "observe.batch",
+  "observe.ack",
   "detail.request",
   "detail.response",
+  "desired.data",
 ] as const;
 
 export type ReservedRuntimeMessageType =

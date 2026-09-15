@@ -138,6 +138,8 @@ services:
         condition: service_healthy
       ha-control:
         condition: service_healthy
+      mcp:
+        condition: service_healthy
       tls-gateway:
         condition: service_started
     healthcheck:
@@ -145,6 +147,21 @@ services:
       interval: 5s
       timeout: 5s
       retries: 30
+
+  mcp:
+    build:
+      context: ../..
+      dockerfile: infra/e2e/Dockerfile.apps
+      target: mcp-test
+    environment:
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: "8091"
+      MCP_TOKEN: test-mcp-token
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8091/health').then(r=>process.exit(r.ok?0:1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   tls-gateway:
     image: caddy:2.9-alpine
@@ -174,6 +191,8 @@ services:
       runtime:
         condition: service_healthy
       ha-control:
+        condition: service_healthy
+      mcp:
         condition: service_healthy
     environment:
       NODE_EXTRA_CA_CERTS: /etc/ssl/certs/ca-certificates.crt

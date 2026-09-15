@@ -21,6 +21,9 @@ export const errorCodes = {
   csrfFailed: "csrf_failed",
   runtimeOffline: "runtime_offline",
   resyncRequired: "resync_required",
+  tokenRevoked: "token_revoked",
+  scopeDenied: "scope_denied",
+  rawUnavailable: "raw_unavailable",
 } as const;
 
 export const errorBody = (code: string, message: string): ErrorBody => ({

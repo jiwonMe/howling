@@ -2,6 +2,7 @@
  * 웹이 조회하는 runtime·HA 연결 상태.
  */
 import { z } from "zod";
+import { mcpSnapshotSchema } from "./mcp.js";
 
 export const haStatusSchema = z.enum([
   "not_configured",
@@ -34,6 +35,7 @@ export const runtimeStatusSchema = z.object({
   lastSeenAt: z.string().datetime().nullable(),
   capabilities: z.unknown().nullable(),
   ha: haConnectionSchema,
+  mcp: mcpSnapshotSchema.optional(),
 });
 
 export type HaStatus = z.infer<typeof haStatusSchema>;

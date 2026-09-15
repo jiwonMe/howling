@@ -9,20 +9,17 @@ import {
   errorBody,
   errorCodes,
   officialCatalog,
-  type RevisionArtifact,
+  ownerPermissions,
 } from "@howling/contracts";
 import type { FastifyInstance } from "fastify";
 import type pg from "pg";
 import { requireCsrf } from "../auth/session.js";
-import { sendToRuntime } from "../runtime/hub.js";
 import { requireSiteMember } from "../sites/access.js";
-import { artifactFromDraft } from "./artifact.js";
+import { createRevision } from "./create-revision.js";
+import { deployRevision } from "./deploy-revision.js";
 import {
   createFlow,
   getFlow,
-  getRevision,
-  insertDeployment,
-  insertRevision,
   listFlows,
   saveDraft,
   saveEditor,
@@ -159,32 +156,12 @@ export const registerFlowRoutes = (
       return;
     }
     const { flowId } = request.params as { flowId: string };
-    const flow = await getFlow(pool, member.siteId, flowId);
-    if (!flow) {
-      return reply.code(404).send(errorBody(errorCodes.notFound, "flow not found"));
-    }
-    const artifact = artifactFromDraft({
-      siteId: member.siteId,
+    const result = await createRevision(
+      pool,
+      { siteId: member.siteId, permissions: ownerPermissions },
       flowId,
-      definition: flow.draft.definition_json as object,
-      triggers: flow.draft.triggers_json as RevisionArtifact["triggers"],
-      connections: flow.draft.connections_json as RevisionArtifact["connections"],
-      executionPolicy: flow.draft.execution_policy_json as RevisionArtifact["executionPolicy"],
-    });
-    const compiled = compileDefinition(artifact.definition);
-    if (!compiled.ok) {
-      return reply.code(400).send(compiled);
-    }
-    if (
-      artifact.triggers.some((item) => item.kind === "ha.state_changed") &&
-      !artifact.connections.some((item) => item.kind === "ha")
-    ) {
-      return reply
-        .code(400)
-        .send(errorBody(errorCodes.invalidRequest, "HA trigger requires an HA connection"));
-    }
-    await insertRevision(pool, member.siteId, flowId, artifact);
-    return { revisionId: artifact.revisionId, digest: artifact.artifactDigest };
+    );
+    return reply.code(result.status).send(result.body);
   });
 
   app.post("/api/v1/sites/:siteId/flows/:flowId/deployments", async (request, reply) => {
@@ -197,38 +174,13 @@ export const registerFlowRoutes = (
     if (!parsed.success) {
       return reply.code(400).send(errorBody(errorCodes.invalidRequest, "revisionId required"));
     }
-    const flow = await getFlow(pool, member.siteId, flowId);
-    if (
-      parsed.data.stateEpoch === "keep" &&
-      flow?.deployment?.revision_id !== parsed.data.revisionId
-    ) {
-      return reply
-        .code(400)
-        .send(errorBody(errorCodes.invalidRequest, "keep is only valid for the same revision"));
-    }
-    const artifact = await getRevision(pool, parsed.data.revisionId);
-    if (!artifact) {
-      return reply.code(404).send(errorBody(errorCodes.notFound, "revision not found"));
-    }
-    const created = await insertDeployment(pool, {
-      siteId: member.siteId,
+    const result = await deployRevision(
+      pool,
+      { siteId: member.siteId, permissions: ownerPermissions },
       flowId,
-      revisionId: parsed.data.revisionId,
-    });
-    const sent = sendToRuntime(member.siteId, "desired.deployment", {
-      deploymentId: created.id,
-      generation: created.generation,
-      artifact,
-      rollback: parsed.data.rollback,
-      stateEpoch: parsed.data.stateEpoch ?? "reset",
-    });
-    if (!sent) {
-      return reply.code(409).send(errorBody(errorCodes.runtimeOffline, "runtime offline"));
-    }
-    return reply.code(202).send({
-      deploymentId: created.id,
-      generation: created.generation,
-    });
+      parsed.data,
+    );
+    return reply.code(result.status).send(result.body);
   });
 
   registerFlowRunRoutes(app, pool, gate);

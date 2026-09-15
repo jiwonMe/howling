@@ -7,7 +7,8 @@
 - 왼쪽: Input, Rolling mean, Condition, Effect
 - 가운데: React Flow. 노드를 추가하면 이전 노드와 자동으로 이어집니다. Condition은 `true` 포트
 - 오른쪽: HA trigger entity, 선택 노드 binding
-- 위: 저장, 검증, Revision, 배포, 시험, 되돌리기
+- 위: 저장, 검증, Revision, 배포, 시험, 실행, 되돌리기, 원본(`captureRaw`) 토글
+- Effect adapter는 기본 `homeassistant`. `mcp`면 로컬에서 발견한 connection·tool을 고른다.
 
 ## 전력 평균 플로를 만드는 예
 
@@ -22,7 +23,7 @@
 
 ## API
 
-모두 `/api/v1/sites/:siteId` 아래입니다. 쿠키 세션과 `x-csrf-token`이 필요합니다. 웹과 이후 MCP가 같은 application service를 부릅니다.
+모두 `/api/v1/sites/:siteId` 아래입니다. 쿠키 세션과 `x-csrf-token`이 필요합니다. 웹과 `POST /mcp`가 같은 application service를 부릅니다. scoped token은 `/connections`에서 발급합니다.
 
 | 경로 | 동작 |
 | --- | --- |
@@ -39,6 +40,10 @@
 | `POST /runs/:id/commands` | step/continue/pause/fixture. 오프라인 409 |
 | `GET /runs`, `GET /runs/:id` | 요약. 원본 payload 없음 |
 | `GET /runs/:id/events` | summary SSE 또는 JSON cursor |
+| `GET/PUT /data-policy`, `POST .../purge` | 원본 ON·보관. purge는 OFF와 별개 |
+| `GET/PUT /observations` | 관측 필드 |
+| `GET /analytics` | 공식 집계. payload 없음 |
+| `POST /runs/:id/detail-requests` | `data.read`. 중계만, 원본 ON을 켜지 않음 |
 
 로그인된 세션으로 목록을 보는 예:
 

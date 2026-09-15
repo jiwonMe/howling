@@ -4,11 +4,16 @@
 import {
   activationResultSchema,
   connectionsSnapshotSchema,
+  observeBatchSchema,
+  rawBatchSchema,
   runSummaryPayloadSchema,
   summaryBatchSchema,
   type RuntimeEnvelope,
 } from "@howling/contracts";
 import type pg from "pg";
+import { acceptDetailResponse } from "../data/detail.js";
+import { insertObserveSamples } from "../data/store.js";
+import { appendStreamRow } from "../data/streams.js";
 import { setDeploymentStatus } from "../flows/store.js";
 import { appendSummaryBatch } from "../flows/journal.js";
 import { upsertRunSummary } from "../flows/runs.js";
@@ -36,6 +41,56 @@ const dispatchRuntimeControl = async (
       payload.status === "active" ? "active" : "failed",
       payload.error,
     );
+    return;
+  }
+  if (envelope.type === "detail.response") {
+    acceptDetailResponse(envelope.payload);
+    return;
+  }
+  if (envelope.type === "raw.batch") {
+    const parsed = rawBatchSchema.safeParse(envelope.payload);
+    if (!parsed.success) {
+      return;
+    }
+    await appendStreamRow(pool, {
+      siteId: envelope.siteId,
+      runtimeId: envelope.runtimeId,
+      stream: "raw",
+      syncSeq: parsed.data.syncSeq,
+      runId: parsed.data.runId,
+      item: parsed.data,
+      tombstone: parsed.data.tombstone ?? false,
+    });
+    return;
+  }
+  if (envelope.type === "observe.batch") {
+    const parsed = observeBatchSchema.safeParse(envelope.payload);
+    if (!parsed.success) {
+      return;
+    }
+    await appendStreamRow(pool, {
+      siteId: envelope.siteId,
+      runtimeId: envelope.runtimeId,
+      stream: "observe",
+      syncSeq: parsed.data.syncSeq,
+      runId: parsed.data.items[0]?.runId ?? null,
+      item: parsed.data,
+      tombstone: parsed.data.tombstone ?? false,
+    });
+    if (!parsed.data.tombstone) {
+      await insertObserveSamples(
+        pool,
+        envelope.siteId,
+        parsed.data.items.map((item) => ({
+          fieldId: item.fieldId,
+          ts: item.ts,
+          value: item.value,
+          kind: item.kind,
+          ...(item.runId ? { runId: item.runId } : {}),
+          ...(item.nodeId ? { nodeId: item.nodeId } : {}),
+        })),
+      );
+    }
     return;
   }
   if (envelope.type === "summary.batch") {
@@ -78,12 +133,27 @@ const dispatchRuntimeControl = async (
     return;
   }
   if (envelope.type === "connections.snapshot") {
-    const payload = connectionsSnapshotSchema.parse(envelope.payload);
+    const parsed = connectionsSnapshotSchema.safeParse(envelope.payload);
+    if (!parsed.success) {
+      return;
+    }
+    const payload = parsed.data;
+    const connectors = ["homeassistant"];
+    if (payload.mcp && payload.mcp.servers.length > 0) {
+      connectors.push("mcp");
+    }
     await pool.query(
       `UPDATE runtime_registrations
        SET capabilities = COALESCE(capabilities, '{}'::jsonb) || $2::jsonb
        WHERE runtime_id = $1`,
-      [envelope.runtimeId, JSON.stringify({ ha: payload.ha, connectors: ["homeassistant"] })],
+      [
+        envelope.runtimeId,
+        JSON.stringify({
+          ha: payload.ha,
+          connectors,
+          ...(payload.mcp ? { mcp: payload.mcp } : {}),
+        }),
+      ],
     );
   }
 };

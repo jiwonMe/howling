@@ -5,23 +5,21 @@ import type { TriggerBinding } from "@howling/contracts";
 import type { WorkflowDefinition } from "@howling/core";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { defaultTestFixtures } from "../editor/test-fixtures.js";
 import { Bindings } from "../editor/bindings.js";
+import type { McpToolOption } from "../editor/effect-fields.js";
 import { FlowCanvas } from "../editor/flow-canvas.js";
 import { Palette } from "../editor/palette.js";
+import { EditorToolbar } from "../editor/toolbar.js";
 import { loginHref, UnauthorizedError } from "../lib/api.js";
+import { getConnections, getFlow, saveDraft, saveEditor, type FlowDetail } from "../lib/flows-api.js";
+import { connectEdge } from "../lib/flow-edges.js";
 import {
-  createRevision,
-  deployRevision,
-  getDeployment,
-  getFlow,
-  saveDraft,
-  saveEditor,
-  startTestSession,
-  validateFlow,
-  type FlowDetail,
-} from "../lib/flows-api.js";
-import { addNode, emptyDefinition, repairBindings, replaceNode } from "../lib/flow-model.js";
+  addNode,
+  draftConnections,
+  emptyDefinition,
+  repairBindings,
+  replaceNode,
+} from "../lib/flow-model.js";
 import { loadStatus } from "../lib/status.js";
 import { buttonRecipe } from "../ui/button.css.js";
 import {
@@ -53,6 +51,8 @@ export const EditorPage = () => {
   const [message, setMessage] = useState<string>();
   const [deployStatus, setDeployStatus] = useState<string>();
   const [testPower, setTestPower] = useState("1400");
+  const [tools, setTools] = useState<readonly McpToolOption[]>([]);
+  const [captureRaw, setCaptureRaw] = useState(false);
 
   useEffect(() => {
     if (!flowId) {
@@ -72,6 +72,9 @@ export const EditorPage = () => {
         setPositions(flow.editor.positions ?? {});
         setTriggers((flow.draft.triggers as TriggerBinding[]) ?? []);
         setDeployStatus(flow.deployment?.status);
+        setCaptureRaw(flow.draft.executionPolicy?.captureRaw ?? false);
+        const catalog = await getConnections(status.site.id);
+        setTools(catalog.connections.mcp?.servers.flatMap((server) => server.tools) ?? []);
       })
       .catch((caught: unknown) => {
         if (caught instanceof UnauthorizedError) {
@@ -99,7 +102,8 @@ export const EditorPage = () => {
       expectedVersion: detail.draft.version,
       definition: next,
       triggers,
-      connections: [{ id: "ha", kind: "ha", connectionId: "ha" }],
+      connections: draftConnections(next),
+      executionPolicy: { mode: "live", captureRaw },
     });
     await saveEditor(siteId, flowId, csrf, {
       expectedVersion: detail.editor.version,
@@ -124,20 +128,14 @@ export const EditorPage = () => {
           if (!connection.source || !connection.target) {
             return;
           }
-          setDefinition({
-            ...definition,
-            edges: [
-              ...definition.edges,
-              {
-                id: `e-${connection.source}-${connection.target}`,
-                source: {
-                  nodeId: connection.source,
-                  port: connection.sourceHandle ?? "success",
-                },
-                target: { nodeId: connection.target, port: connection.targetHandle ?? "in" },
-              },
-            ],
-          });
+          setDefinition(
+            connectEdge(definition, {
+              sourceId: connection.source,
+              targetId: connection.target,
+              ...(connection.sourceHandle ? { sourcePort: connection.sourceHandle } : {}),
+              ...(connection.targetHandle ? { targetPort: connection.targetHandle } : {}),
+            }),
+          );
         }}
       />
       <div className={floatBar}>
@@ -154,108 +152,21 @@ export const EditorPage = () => {
           </div>
         </header>
         <div className={`${floatCluster} ${toolbar}`}>
-          <button className={buttonRecipe()} data-testid="save-draft" type="button" onClick={() => void persist()}>
-            저장
-          </button>
-          <button
-            className={buttonRecipe()}
-            data-testid="validate-flow"
-            type="button"
-            onClick={() => {
-              const next = repairBindings(definition);
-              setDefinition(next);
-              void validateFlow(siteId, flowId, csrf, next).then((result) =>
-                setMessage(result.ok ? "검증 통과" : result.diagnostics?.map((item) => item.message).join("; ")),
-              );
-            }}
-          >
-            검증
-          </button>
-          <button
-            className={buttonRecipe()}
-            data-testid="create-revision"
-            type="button"
-            onClick={() => {
-              void persist()
-                .then(() => createRevision(siteId, flowId, csrf))
-                .then((result) => setMessage(`revision ${result.revisionId}`));
-            }}
-          >
-            Revision
-          </button>
-          <button
-            className={buttonRecipe({ intent: "primary" })}
-            data-testid="deploy-flow"
-            type="button"
-            onClick={() => {
-              void persist()
-                .then(() => createRevision(siteId, flowId, csrf))
-                .then((revision) => deployRevision(siteId, flowId, csrf, revision.revisionId))
-                .then(async (deployed) => {
-                  setMessage("배포 요청");
-                  for (let attempt = 0; attempt < 40; attempt += 1) {
-                    const row = await getDeployment(siteId, deployed.deploymentId);
-                    setDeployStatus(row.status);
-                    if (row.status === "active" || row.status === "failed") {
-                      setMessage(`배포 ${row.status}`);
-                      return;
-                    }
-                    await new Promise((resolve) => setTimeout(resolve, 1000));
-                  }
-                });
-            }}
-          >
-            배포
-          </button>
-          <button
-            className={buttonRecipe()}
-            data-testid="dry-run-flow"
-            type="button"
-            onClick={() => {
-              void persist()
-                .then((next) =>
-                  startTestSession(siteId, flowId, csrf, {
-                    source: "draft",
-                    input: { power: Number(testPower) },
-                    fixtures: defaultTestFixtures(next),
-                    progression: "auto",
-                    idempotencyKey: `test-${Date.now()}`,
-                  }),
-                )
-                .then((session) => navigate(`/runs/${session.runId}`))
-                .catch((caught: unknown) =>
-                  setMessage(caught instanceof Error ? caught.message : "시험 실패"),
-                );
-            }}
-          >
-            시험
-          </button>
-          {previousRevision ? (
-            <button
-              className={buttonRecipe()}
-              data-testid="rollback-flow"
-              type="button"
-              onClick={() => {
-                void deployRevision(siteId, flowId, csrf, previousRevision, {
-                  rollback: true,
-                  stateEpoch: "reset",
-                }).then(async (deployed) => {
-                  setMessage("되돌리기 요청");
-                  for (let attempt = 0; attempt < 40; attempt += 1) {
-                    const row = await getDeployment(siteId, deployed.deploymentId);
-                    setDeployStatus(row.status);
-                    if (row.status === "active" || row.status === "failed") {
-                      setMessage(`배포 ${row.status}`);
-                      return;
-                    }
-                    await new Promise((resolve) => setTimeout(resolve, 1000));
-                  }
-                });
-              }}
-            >
-              되돌리기
-            </button>
-          ) : null}
+          <EditorToolbar
+            siteId={siteId}
+            flowId={flowId}
+            csrf={csrf}
+            definition={definition}
+            testPower={testPower}
+            persist={persist}
+            onDefinition={setDefinition}
+            onMessage={setMessage}
+            onDeployStatus={setDeployStatus}
+            onOpenedRun={(runId) => navigate(`/runs/${runId}`)}
+            captureRaw={captureRaw}
+            onCaptureRaw={setCaptureRaw}
+            {...(previousRevision ? { previousRevision } : {})}
+          />
         </div>
       </div>
       <Palette
@@ -273,6 +184,7 @@ export const EditorPage = () => {
         triggers={triggers}
         onTriggers={setTriggers}
         onNode={(node: NodeInstance) => setDefinition(replaceNode(definition, node.id, node))}
+        tools={tools}
       />
       {message ? (
         <p className={`${floatNote} ${deployStatus === "failed" ? errorText : muted}`}>{message}</p>

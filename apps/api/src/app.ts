@@ -10,8 +10,12 @@ import type { ApiConfig } from "./config.js";
 import { registerHealthRoutes } from "./health/routes.js";
 import { registerRuntimeGateway } from "./runtime/ws.js";
 import { registerFlowRoutes } from "./flows/routes.js";
+import { registerMcpRoutes } from "./mcp/routes.js";
+import { registerMcpOauthRoutes } from "./oauth/mcp-callback.js";
 import { registerPairingRoutes } from "./pairings/routes.js";
 import { registerSiteRoutes } from "./sites/routes.js";
+import { registerTokenRoutes } from "./tokens/routes.js";
+import { registerDataRoutes } from "./data/routes.js";
 
 export const createApiApp = async (
   config: ApiConfig,
@@ -25,6 +29,10 @@ export const createApiApp = async (
   registerSiteRoutes(app, pool);
   registerPairingRoutes(app, pool);
   registerFlowRoutes(app, pool);
+  registerTokenRoutes(app, pool);
+  registerDataRoutes(app, pool);
+  registerMcpRoutes(app, pool);
+  registerMcpOauthRoutes(app);
   registerRuntimeGateway(app, pool);
   return app;
 };
