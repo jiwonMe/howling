@@ -1,8 +1,10 @@
 /**
- * Effect binding. HA 기본 경로는 그대로 두고 MCP를 고를 수 있다.
+ * Effect binding. 기본은 기기, HA·MCP는 고급.
  */
+import type { DeviceSummary } from "@howling/contracts";
 import type { JsonValue, WorkflowDefinition } from "@howling/core";
 import { field, input, label, select } from "../ui/form.css.js";
+import { DeviceFields, deviceEffectPatch } from "./device-fields.js";
 
 type NodeInstance = WorkflowDefinition["nodes"][number];
 
@@ -17,8 +19,9 @@ export const EffectFields = (props: {
   readonly node: NodeInstance;
   readonly onNode: (node: NodeInstance) => void;
   readonly tools: readonly McpToolOption[];
+  readonly devices: readonly DeviceSummary[];
 }) => {
-  const adapter = String(props.node.config.adapter ?? "homeassistant");
+  const adapter = String(props.node.config.adapter ?? "device");
   return (
     <>
       <label className={field}>
@@ -29,14 +32,17 @@ export const EffectFields = (props: {
           value={adapter}
           onChange={(event) => switchAdapter(props, event.target.value)}
         >
-          <option value="homeassistant">homeassistant</option>
+          <option value="device">기기</option>
           <option value="mcp">mcp</option>
+          <option value="homeassistant">고급 (HA 서비스)</option>
         </select>
       </label>
       {adapter === "mcp" ? (
         <McpFields node={props.node} onNode={props.onNode} tools={props.tools} />
-      ) : (
+      ) : adapter === "homeassistant" ? (
         <HaFields node={props.node} onNode={props.onNode} />
+      ) : (
+        <DeviceFields devices={props.devices} node={props.node} onNode={props.onNode} />
       )}
     </>
   );
@@ -46,6 +52,10 @@ const switchAdapter = (
   props: { readonly node: NodeInstance; readonly onNode: (node: NodeInstance) => void },
   adapter: string,
 ) => {
+  if (adapter === "device") {
+    props.onNode(deviceEffectPatch(props.node));
+    return;
+  }
   if (adapter === "mcp") {
     props.onNode({
       ...props.node,

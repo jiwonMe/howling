@@ -93,10 +93,10 @@ export const StatusPage = () => {
           <p className={statDetail}>{runtimeDetail(data.runtime)}</p>
         </article>
         <article className={stat}>
-          <p className={statLabel}>Home Assistant</p>
+          <p className={statLabel}>허브</p>
           <p className={statValue({ online: ha === "ready" })}>{ha}</p>
           <p className={statDetail}>
-            {ha === "not_configured" ? "local setup only" : `HA ${ha}`}
+            {ha === "not_configured" ? "local setup only" : `허브 ${ha}`}
           </p>
         </article>
       </section>

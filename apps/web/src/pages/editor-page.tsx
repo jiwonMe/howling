@@ -1,7 +1,7 @@
 /**
  * 초안 저장·검증·revision·배포.
  */
-import type { TriggerBinding } from "@howling/contracts";
+import type { DeviceSummary, TriggerBinding } from "@howling/contracts";
 import type { WorkflowDefinition } from "@howling/core";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -11,6 +11,7 @@ import { FlowCanvas } from "../editor/flow-canvas.js";
 import { Palette } from "../editor/palette.js";
 import { EditorToolbar } from "../editor/toolbar.js";
 import { loginHref, UnauthorizedError } from "../lib/api.js";
+import { getDevices } from "../lib/devices-api.js";
 import { getConnections, getFlow, saveDraft, saveEditor, type FlowDetail } from "../lib/flows-api.js";
 import { connectEdge } from "../lib/flow-edges.js";
 import {
@@ -52,6 +53,7 @@ export const EditorPage = () => {
   const [deployStatus, setDeployStatus] = useState<string>();
   const [testPower, setTestPower] = useState("1400");
   const [tools, setTools] = useState<readonly McpToolOption[]>([]);
+  const [devices, setDevices] = useState<readonly DeviceSummary[]>([]);
   const [captureRaw, setCaptureRaw] = useState(false);
 
   useEffect(() => {
@@ -75,6 +77,8 @@ export const EditorPage = () => {
         setCaptureRaw(flow.draft.executionPolicy?.captureRaw ?? false);
         const catalog = await getConnections(status.site.id);
         setTools(catalog.connections.mcp?.servers.flatMap((server) => server.tools) ?? []);
+        const listed = await getDevices(status.site.id).catch(() => ({ devices: [] }));
+        setDevices(listed.devices);
       })
       .catch((caught: unknown) => {
         if (caught instanceof UnauthorizedError) {
@@ -82,6 +86,24 @@ export const EditorPage = () => {
         }
       });
   }, [flowId]);
+
+  useEffect(() => {
+    if (!siteId) {
+      return;
+    }
+    const refresh = () => {
+      void getDevices(siteId)
+        .then((listed) => setDevices(listed.devices))
+        .catch((caught: unknown) => {
+          if (caught instanceof UnauthorizedError) {
+            window.location.assign(loginHref);
+          }
+        });
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 4000);
+    return () => window.clearInterval(timer);
+  }, [siteId]);
 
   if (!siteId || !csrf || !flowId || !definition || !detail) {
     return (
@@ -185,6 +207,7 @@ export const EditorPage = () => {
         onTriggers={setTriggers}
         onNode={(node: NodeInstance) => setDefinition(replaceNode(definition, node.id, node))}
         tools={tools}
+        devices={devices}
       />
       {message ? (
         <p className={`${floatNote} ${deployStatus === "failed" ? errorText : muted}`}>{message}</p>

@@ -22,7 +22,7 @@ export const connectorsOf = (input: {
     }
   }
   for (const node of input.definition.nodes ?? []) {
-    if (node.config?.adapter === "homeassistant") {
+    if (node.config?.adapter === "homeassistant" || node.config?.adapter === "device") {
       found.add("homeassistant");
     }
     if (node.config?.adapter === "mcp") {

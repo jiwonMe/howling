@@ -4,6 +4,7 @@
 import {
   activationResultSchema,
   connectionsSnapshotSchema,
+  devicesSnapshotSchema,
   observeBatchSchema,
   rawBatchSchema,
   runSummaryPayloadSchema,
@@ -14,6 +15,7 @@ import type pg from "pg";
 import { acceptDetailResponse } from "../data/detail.js";
 import { insertObserveSamples } from "../data/store.js";
 import { appendStreamRow } from "../data/streams.js";
+import { replaceSiteDevices } from "../devices/store.js";
 import { setDeploymentStatus } from "../flows/store.js";
 import { appendSummaryBatch } from "../flows/journal.js";
 import { upsertRunSummary } from "../flows/runs.js";
@@ -130,6 +132,14 @@ const dispatchRuntimeControl = async (
       trigger: payload.trigger ?? null,
       events: payload.events,
     });
+    return;
+  }
+  if (envelope.type === "devices.snapshot") {
+    const parsed = devicesSnapshotSchema.safeParse(envelope.payload);
+    if (!parsed.success) {
+      return;
+    }
+    await replaceSiteDevices(pool, envelope.siteId, parsed.data.devices);
     return;
   }
   if (envelope.type === "connections.snapshot") {

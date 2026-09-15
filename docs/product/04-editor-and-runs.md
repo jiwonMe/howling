@@ -6,18 +6,18 @@
 
 - 왼쪽: Input, Rolling mean, Condition, Effect
 - 가운데: React Flow. 노드를 추가하면 이전 노드와 자동으로 이어집니다. Condition은 `true` 포트
-- 오른쪽: HA trigger entity, 선택 노드 binding
+- 오른쪽: 숫자 기기 trigger, 선택 노드 binding. 「고급: HA entity」는 예전 `entity_id` 입력
 - 위: 저장, 검증, Revision, 배포, 시험, 실행, 되돌리기, 원본(`captureRaw`) 토글
-- Effect adapter는 기본 `homeassistant`. `mcp`면 로컬에서 발견한 connection·tool을 고른다.
+- Effect adapter는 기본 `device` / `action`. `homeassistant`는 「고급 (HA 서비스)」, `mcp`면 로컬에서 발견한 connection·tool을 고른다.
 
 ## 전력 평균 플로를 만드는 예
 
 1. `/flows`에서 **새 플로**를 누른다. 이름이 `Power alert`로 만들어진다.
 2. 팔레트에서 Input → Rolling mean → Condition → Effect 순으로 추가한다.
-3. Trigger HA entity에 `input_number.test_power`를 넣는다. `inputKey`는 `power`다.
+3. Trigger에서 기기 `Test Power`를 고른다. 저장값은 `kind: "device.changed"`, `config.deviceId`, `inputKey: "power"`다. `entity_id`는 초안에 없다.
 4. mean 노드: `windowSize` `5`, value path `/power`.
 5. condition 노드: operator는 기본 `gt`, right `1000`. left는 mean의 `mean` 출력.
-6. effect 노드: domain `input_boolean`, service `turn_on`, entity_id `input_boolean.test_alert`. adapter는 `homeassistant` / `call_service`.
+6. effect 노드: 기기 `Test Alert`, 동작 `turn_on`. adapter는 `device` / `action`. request는 `{ deviceId, action }`.
 
 저장 뒤에 **검증**이 `검증 통과`여야 합니다. **배포**는 저장 → revision → desired.deployment를 한 번에 보냅니다. 헤더가 `배포 active`가 될 때까지 기다립니다.
 
@@ -35,6 +35,7 @@
 | `POST .../deployments` | generation++, desired 전송, HTTP 202 |
 | `GET /deployments/:id` | requested / validating / staged / active / failed |
 | `GET /connections`, `GET /catalog` | runtime이 보고한 metadata |
+| `GET /devices` | 이름·종류·동작. `entity_id` 없음 |
 | `POST /flows/:id/runs` | 배포된 revision 수동 실행, idempotency key |
 | `POST /flows/:id/test-sessions` | draft/revision/run을 고정해 dry-run. 202 + runId |
 | `POST /runs/:id/commands` | step/continue/pause/fixture. 오프라인 409 |
@@ -101,17 +102,17 @@ curl -sS -H "cookie: ${COOKIE}" \
   },
   "triggers": [
     {
-      "id": "ha-power",
-      "kind": "ha.state_changed",
+      "id": "device-trigger",
+      "kind": "device.changed",
       "connectionId": "ha",
-      "config": { "entityId": "input_number.test_power", "inputKey": "power" }
+      "config": { "deviceId": "dev_0123456789abcdef", "inputKey": "power" }
     }
   ],
   "connections": [{ "id": "ha", "kind": "ha", "connectionId": "ha" }]
 }
 ```
 
-HA trigger가 있으면 connections에 `kind: "ha"`가 있어야 배포가 됩니다. catalog version은 `2026.09.1`입니다.
+`device.changed` 또는 HA trigger가 있으면 connections에 `kind: "ha"`가 있어야 배포가 됩니다. catalog version은 `2026.09.1`입니다. 기기는 [기기](./09-devices.md)입니다.
 
 ## Runtime이 받는 배포
 
@@ -120,7 +121,7 @@ WSS 이름(예약 그대로):
 | 방향 | type |
 | --- | --- |
 | API → runtime | `desired.deployment`, `run.start`, `run.step`, `summary.ack` |
-| runtime → API | `hello`, `heartbeat`, `activation.result`, `summary.batch`, `run.summary`, `connections.snapshot` |
+| runtime → API | `hello`, `heartbeat`, `activation.result`, `summary.batch`, `run.summary`, `connections.snapshot`, `devices.snapshot` |
 
 Runtime은 digest·노드 버전·HA connection binding을 검사한 뒤 `revision_artifacts`를 upsert합니다. 활성 포인터는 한 SQLite 트랜잭션입니다. 실패하면 이전 활성 revision을 유지합니다.
 

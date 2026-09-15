@@ -20,6 +20,7 @@ Howling은 Home Assistant를 이용한 시각적 자동화 플랫폼입니다. �
 7. [Dry-run](./product/06-dry-run.md)
 8. [MCP](./product/07-mcp.md)
 9. [관측·원본·설치](./product/08-analytics-and-data.md)
+10. [기기](./product/09-devices.md)
 
 ## Core 자습서
 

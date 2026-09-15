@@ -34,7 +34,9 @@ export const createRevision = async (
     return { ok: false, status: 400, body: compiled };
   }
   if (
-    artifact.triggers.some((item) => item.kind === "ha.state_changed") &&
+    artifact.triggers.some(
+      (item) => item.kind === "ha.state_changed" || item.kind === "device.changed",
+    ) &&
     !artifact.connections.some((item) => item.kind === "ha")
   ) {
     return {

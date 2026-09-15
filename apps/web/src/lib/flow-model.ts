@@ -73,7 +73,7 @@ export const defaultNode = (type: string, id: string, nodes: readonly NodeInstan
   const catalog = catalogOf(type);
   const config =
     type === "core.effect"
-      ? { adapter: "homeassistant", operation: "call_service" }
+      ? { adapter: "device", operation: "action" }
       : { ...(catalog?.defaultConfig ?? {}) };
   return {
     id,

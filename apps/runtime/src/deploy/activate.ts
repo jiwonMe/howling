@@ -23,7 +23,9 @@ export const activateArtifact = (
     return { status: "ignored" };
   }
   if (
-    input.artifact.triggers.some((item) => item.kind === "ha.state_changed") &&
+    input.artifact.triggers.some(
+      (item) => item.kind === "ha.state_changed" || item.kind === "device.changed",
+    ) &&
     !input.artifact.connections.some((item) => item.kind === "ha")
   ) {
     return { status: "failed", error: "HA connection required" };

@@ -3,6 +3,7 @@
  */
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ConnectionsPage } from "./pages/connections-page.js";
+import { DevicesPage } from "./pages/devices-page.js";
 import { EditorPage } from "./pages/editor-page.js";
 import { FlowsPage } from "./pages/flows-page.js";
 import { RunPage } from "./pages/run-page.js";
@@ -16,6 +17,7 @@ export const App = () => (
       <Route element={<AppShell />}>
         <Route path="/" element={<StatusPage />} />
         <Route path="/connections" element={<ConnectionsPage />} />
+        <Route path="/devices" element={<DevicesPage />} />
         <Route path="/flows" element={<FlowsPage />} />
         <Route path="/flows/:flowId" element={<EditorPage />} />
         <Route path="/runs/:runId" element={<RunPage />} />

@@ -3,12 +3,12 @@ export const setupHtml = (): string => `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><title>Howling runtime setup</title>
 <style>body{font-family:sans-serif;margin:2rem;max-width:36rem}label{display:block;margin:.5rem 0}fieldset{margin:1.5rem 0;border:1px solid #ccc}</style>
 </head><body>
-<h1>Runtime setup</h1>
-<p>HA·MCP 토큰은 이 장비에만 저장됩니다. Cloud는 stdio command를 받지 않습니다.</p>
+<h1>허브 연결</h1>
+<p>HA OS 앱은 자동입니다. Docker는 주소·토큰을 넣습니다. 토큰은 이 장비에만 있습니다.</p>
 <form id="ha">
-<label>HA URL <input name="url" required></label>
+<label>허브 URL <input name="url" required></label>
 <label>Long-lived token <input name="token" type="password" required></label>
-<button type="submit">HA 저장</button>
+<button type="submit">허브 저장</button>
 </form>
 <fieldset>
 <legend>MCP</legend>

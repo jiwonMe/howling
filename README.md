@@ -6,9 +6,10 @@ Home Assistant를 노드로 자동화하는 제품입니다. 브라우저에서 
 
 ## 지금 되는 것
 
-- 로그인, pairing, HA WebSocket 준비 상태
+- 로그인, pairing, 허브 WebSocket 준비 상태
+- 기기 목록. 초안·cloud에는 `deviceId`만, `entity_id`는 runtime에만
 - React Flow 편집기에서 초안 저장·검증·revision·배포
-- `state_changed` trigger → `@howling/core` 실행 → `homeassistant.call_service`
+- `device.changed` trigger → `@howling/core` 실행 → `device.action` → 로컬 HA 서비스
 - 실행 상세 5초 polling
 - `https://howling.test` E2E (테스트 CA는 Playwright 컨테이너만 신뢰)
 
@@ -42,11 +43,12 @@ pnpm test:e2e
 
 | 경로 | 내용 |
 | --- | --- |
-| `/` | API·runtime·HA 상태 |
-| `/connections` | pairing, HA·MCP, 원본 전송·보관, OAuth 제공자, scoped token |
+| `/` | API·runtime·허브 상태 |
+| `/connections` | pairing, 허브·MCP, 원본 전송·보관, OAuth 제공자, scoped token |
+| `/devices` | 허브 기기 이름·종류·동작 |
 | `/flows` | 초안·배포 목록 |
 | `/flows/:flowId` | 편집기 |
 | `/runs/:runId` | 실행 상세 |
 | `/analytics` | 관측 차트·필드 선택 |
 
-로컬 runtime setup 페이지는 `http://127.0.0.1:4000/setup`입니다. HA 토큰은 클라우드에 올리지 않습니다.
+로컬 runtime setup 페이지는 `http://127.0.0.1:4000/setup`입니다. 허브 토큰은 클라우드에 올리지 않습니다. HA OS 앱은 자동, Docker는 주소·토큰을 넣습니다.

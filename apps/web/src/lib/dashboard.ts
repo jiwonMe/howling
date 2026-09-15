@@ -34,13 +34,13 @@ export const siteClaim = (
   }
   if (ha !== "ready") {
     return {
-      title: "Home Assistant가 준비되지 않았습니다",
-      detail: "로컬 setup에서 URL과 토큰을 넣습니다.",
+      title: "허브가 준비되지 않았습니다",
+      detail: "로컬 setup에서 주소와 토큰을 넣습니다.",
     };
   }
   return {
     title: "실행할 수 있습니다",
-    detail: "Runtime은 online이고 Home Assistant는 ready입니다.",
+    detail: "Runtime은 online이고 허브는 ready입니다.",
   };
 };
 

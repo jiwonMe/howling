@@ -18,6 +18,10 @@ import { applyCaptureGate, flushUnackedRaw, publishRunRaw } from "./data/publish
 import { retainLocal } from "./data/retain.js";
 import { flushUnackedObserve, tickObserver } from "./observe/tick.js";
 import { resolveHaEndpoint } from "./ha/supervisor.js";
+import { createDeviceAwareAdapter } from "./devices/adapter.js";
+import { reportDevices } from "./devices/report.js";
+import { syncDeviceCatalog, upsertDevices } from "./devices/store.js";
+import { dispatchDeviceTriggers } from "./devices/triggers.js";
 import { createHaAwareAdapter } from "./ha/adapter.js";
 import { startHaConnector, type HaHandle } from "./ha/client.js";
 import { createHaCallLog } from "./ha/hooks.js";
@@ -48,10 +52,13 @@ const haLog = createHaCallLog();
 let ha: HaHandle | undefined;
 const mcpRegistry = createMcpRegistry(db, config.secretRoot);
 const adapter = createMcpAwareAdapter({
-  next: createHaAwareAdapter({
-    fake: createFakeAdapter(),
-    ha: () => ha,
-    testHooks: config.testHooks,
+  next: createDeviceAwareAdapter({
+    next: createHaAwareAdapter({
+      fake: createFakeAdapter(),
+      ha: () => ha,
+      testHooks: config.testHooks,
+    }),
+    db,
   }),
   registry: () => mcpRegistry,
 });
@@ -82,6 +89,7 @@ const reportAll = (status?: HaStatus) => {
     { status: status ?? ha?.status() ?? "not_configured", lastSyncAt: ha?.lastSyncAt() ?? null },
     mcpRegistry.snapshot(),
   );
+  reportDevices(gateway, db);
 };
 
 const startHa = () => {
@@ -99,7 +107,24 @@ const startHa = () => {
     token: endpoint.token,
     ...(endpoint.websocketPath ? { websocketPath: endpoint.websocketPath } : {}),
     onStatus: reportAll,
-    onEvent: (event) => dispatchHaTriggers(host, event, false),
+    onEntities: (items) => {
+      try {
+        syncDeviceCatalog(db, session.runtimeId, items);
+        reportDevices(gateway, db);
+      } catch {
+        // 카탈로그 실패는 HA 구독을 끊지 않는다.
+      }
+    },
+    onEvent: (event) => {
+      dispatchHaTriggers(host, event, false);
+      dispatchDeviceTriggers(host, event, false);
+      try {
+        upsertDevices(db, session.runtimeId, [event]);
+        reportDevices(gateway, db);
+      } catch {
+        // 카탈로그 실패는 실행을 멈추지 않는다.
+      }
+    },
     onCall: haLog.record,
   });
 };
@@ -152,8 +177,8 @@ await mcpRegistry.reload();
 startHa();
 reportAll();
 retainLocal(host.db);
-setInterval(() => reportAll(), 5000);
-setInterval(() => retainLocal(host.db), 60_000);
+const reportTimer = setInterval(() => reportAll(), 5000);
+const retainTimer = setInterval(() => retainLocal(host.db), 60_000);
 
 const app = createRuntimeApp(db, host, {
   secretRoot: config.secretRoot,
@@ -171,6 +196,8 @@ const app = createRuntimeApp(db, host, {
 await app.listen({ host: config.listenHost, port: config.listenPort });
 
 const shutdown = () => {
+  clearInterval(reportTimer);
+  clearInterval(retainTimer);
   host.stop();
   ha?.stop();
   void mcpRegistry.stop();

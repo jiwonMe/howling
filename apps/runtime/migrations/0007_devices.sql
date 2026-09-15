@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS devices (
+  id TEXT PRIMARY KEY,
+  entity_id TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  numeric INTEGER NOT NULL,
+  available INTEGER NOT NULL,
+  updated_at TEXT NOT NULL
+);

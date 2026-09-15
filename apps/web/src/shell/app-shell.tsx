@@ -11,6 +11,7 @@ import {
   ChartLineOutline18,
   GaugeOutline18,
   HouseDashboard2Outline18,
+  LightSwitchOutline18,
   NodesOutline18,
   Plug2Outline18,
   RectLogoutOutline18,
@@ -61,6 +62,10 @@ export const AppShell = () => {
           <NavLink className={({ isActive }) => navLink({ active: isActive })} to="/connections">
             <Plug2Outline18 aria-hidden className={iconMark} />
             연결
+          </NavLink>
+          <NavLink className={({ isActive }) => navLink({ active: isActive })} to="/devices">
+            <LightSwitchOutline18 aria-hidden className={iconMark} />
+            기기
           </NavLink>
           <NavLink className={({ isActive }) => navLink({ active: isActive })} to="/flows">
             <NodesOutline18 aria-hidden className={iconMark} />

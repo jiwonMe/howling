@@ -142,6 +142,22 @@ export {
   streamAckSchema,
   syncStreamSchema,
 } from "./runtime/streams.js";
+export {
+  deviceActionRequestSchema,
+  deviceActionSchema,
+  deviceKindSchema,
+  deviceSummarySchema,
+  deviceTriggerConfigSchema,
+  devicesSnapshotSchema,
+} from "./devices.js";
+export type {
+  DeviceAction,
+  DeviceActionRequest,
+  DeviceKind,
+  DeviceSummary,
+  DeviceTriggerConfig,
+  DevicesSnapshot,
+} from "./devices.js";
 export type {
   DesiredData,
   DetailRequest,

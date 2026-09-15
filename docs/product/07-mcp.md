@@ -33,7 +33,7 @@ Effect 입력:
 
 | Tool | Scope |
 | --- | --- |
-| list_flows, get_flow, get_run, get_run_summary | `read` |
+| list_flows, get_flow, get_run, get_run_summary, list_devices | `read` |
 | save_draft, validate_flow | `edit` |
 | start_dry_run | `run` |
 | create_revision, deploy_revision | `deploy` |

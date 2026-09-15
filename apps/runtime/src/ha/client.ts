@@ -5,9 +5,13 @@ import WebSocket from "ws";
 import type { HaStatus } from "@howling/contracts";
 import { pendingId, readWsText } from "./ws-parse.js";
 
-export type HaEvent = {
+export type HaEntityRow = {
   readonly entityId: string;
   readonly state: string;
+  readonly friendlyName?: string;
+};
+
+export type HaEvent = HaEntityRow & {
   readonly previous?: string;
 };
 
@@ -28,6 +32,7 @@ export interface HaConnectorInput {
   readonly websocketPath?: string;
   readonly onStatus: (status: HaStatus) => void;
   readonly onEvent: (event: HaEvent) => void;
+  readonly onEntities?: (items: readonly HaEntityRow[]) => void;
   readonly onCall?: (call: { id: number; domain: string; service: string }) => void;
 }
 
@@ -101,7 +106,7 @@ export const startHaConnector = (input: HaConnectorInput): HaHandle => {
         event?: {
           data?: {
             entity_id?: string;
-            new_state?: { state?: string };
+            new_state?: { state?: string; attributes?: { friendly_name?: string } };
             old_state?: { state?: string };
           };
         };
@@ -124,9 +129,14 @@ export const startHaConnector = (input: HaConnectorInput): HaHandle => {
           if (result instanceof Error || !Array.isArray(result)) {
             return;
           }
-          for (const item of result as { entity_id: string; state: string }[]) {
+          const rows = (result as HaStateRow[]).flatMap((item) => {
+            if (!item.entity_id || item.state === undefined) {
+              return [];
+            }
             known.set(item.entity_id, item.state);
-          }
+            return [rowOf(item)];
+          });
+          input.onEntities?.(rows);
           snapshotDone = true;
           if (subscribed) {
             lastSyncAt = new Date().toISOString();
@@ -175,10 +185,12 @@ export const startHaConnector = (input: HaConnectorInput): HaHandle => {
         }
         const previous = known.get(entityId);
         known.set(entityId, next);
+        const friendlyName = data.new_state?.attributes?.friendly_name;
         input.onEvent({
           entityId,
           state: next,
           ...(previous === undefined ? {} : { previous }),
+          ...(friendlyName ? { friendlyName } : {}),
         });
       }
     });
@@ -213,3 +225,15 @@ export const startHaConnector = (input: HaConnectorInput): HaHandle => {
     },
   };
 };
+
+type HaStateRow = {
+  readonly entity_id?: string;
+  readonly state?: string;
+  readonly attributes?: { readonly friendly_name?: string };
+};
+
+const rowOf = (item: HaStateRow): HaEntityRow => ({
+  entityId: item.entity_id ?? "",
+  state: item.state ?? "",
+  ...(item.attributes?.friendly_name ? { friendlyName: item.attributes.friendly_name } : {}),
+});

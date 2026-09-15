@@ -63,8 +63,7 @@ export const ConnectionsPage = () => {
         </div>
       </header>
       <p className={caption}>
-        Pairing code로 이 site에 로컬 runtime을 묶습니다. Home Assistant secret은 runtime에만
-        있습니다.
+        Pairing code로 이 site에 로컬 runtime을 묶습니다. 허브 secret은 runtime에만 있습니다.
       </p>
       <section className={statStrip({ columns: "three" })}>
         <article className={stat}>
@@ -74,12 +73,12 @@ export const ConnectionsPage = () => {
           </p>
           <p className={statDetail} data-testid="runtime-sync">
             {data.runtime.ha.lastSyncAt
-              ? `HA sync ${data.runtime.ha.lastSyncAt}`
+              ? `허브 sync ${data.runtime.ha.lastSyncAt}`
               : runtimeDetail(data.runtime)}
           </p>
         </article>
         <article className={stat}>
-          <p className={statLabel}>Home Assistant</p>
+          <p className={statLabel}>허브</p>
           <p className={statValue({ online: ha === "ready" })} data-testid="ha-status">
             {ha}
           </p>

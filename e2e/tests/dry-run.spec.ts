@@ -28,16 +28,25 @@ test("tests a mean flow without calling Home Assistant", async ({ page, request 
   await page.getByTestId("palette-analysis.rolling-mean").click();
   await page.getByTestId("palette-core.condition").click();
   await page.getByTestId("palette-core.effect").click();
-  await page.getByTestId("trigger-entity").fill("input_number.test_power");
+  await expect
+    .poll(async () => page.getByTestId("trigger-device").locator("option", { hasText: "Test Power" }).count(), {
+      timeout: 60_000,
+    })
+    .toBeGreaterThan(0);
+  await page.getByTestId("trigger-device").selectOption({ label: "Test Power" });
   await page.getByTestId("node-mean").click();
   await page.getByTestId("bind-window").fill("5");
   await page.getByTestId("bind-mean-path").fill("/power");
   await page.getByTestId("node-condition").click();
   await page.getByTestId("bind-right").fill("1000");
   await page.getByTestId("node-effect").click();
-  await page.getByTestId("bind-domain").fill("input_boolean");
-  await page.getByTestId("bind-service").fill("turn_on");
-  await page.getByTestId("bind-entity").fill("input_boolean.test_alert");
+  await expect
+    .poll(async () => page.getByTestId("bind-device").locator("option", { hasText: "Test Alert" }).count(), {
+      timeout: 60_000,
+    })
+    .toBeGreaterThan(0);
+  await page.getByTestId("bind-device").selectOption({ label: "Test Alert" });
+  await page.getByTestId("bind-action").selectOption("turn_on");
   await page.getByTestId("save-draft").click();
   await page.getByTestId("validate-flow").click();
   await expect(page.getByText("검증 통과")).toBeVisible();

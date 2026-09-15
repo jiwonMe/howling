@@ -22,6 +22,7 @@ import {
 } from "../flows/read-services.js";
 import { startDryRun } from "../flows/start-dry-run.js";
 import { startLiveRun } from "../flows/start-live-run.js";
+import { listDevicesFor } from "../devices/read.js";
 
 type ToolName = keyof typeof MCP_TOOL_SCOPES;
 
@@ -46,6 +47,9 @@ const invoke = async (
   const flowId = String(args.flowId ?? "");
   if (name === "list_flows") {
     return listFlowsFor(pool, actor);
+  }
+  if (name === "list_devices") {
+    return listDevicesFor(pool, actor);
   }
   if (name === "get_flow") {
     return getFlowFor(pool, actor, flowId);

@@ -16,6 +16,7 @@ import { registerPairingRoutes } from "./pairings/routes.js";
 import { registerSiteRoutes } from "./sites/routes.js";
 import { registerTokenRoutes } from "./tokens/routes.js";
 import { registerDataRoutes } from "./data/routes.js";
+import { registerDeviceRoutes } from "./devices/routes.js";
 
 export const createApiApp = async (
   config: ApiConfig,
@@ -31,6 +32,7 @@ export const createApiApp = async (
   registerFlowRoutes(app, pool);
   registerTokenRoutes(app, pool);
   registerDataRoutes(app, pool);
+  registerDeviceRoutes(app, pool);
   registerMcpRoutes(app, pool);
   registerMcpOauthRoutes(app);
   registerRuntimeGateway(app, pool);

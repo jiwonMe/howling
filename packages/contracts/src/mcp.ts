@@ -74,6 +74,7 @@ export const MCP_TOOL_SCOPES = {
   get_run: ["read"],
   get_run_summary: ["read"],
   get_run_detail: ["data.read"],
+  list_devices: ["read"],
 } as const;
 
 export const oauthCodePayloadSchema = z.object({
