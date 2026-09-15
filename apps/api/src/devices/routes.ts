@@ -1,5 +1,5 @@
 /**
- * GET·POST /api/v1/sites/:siteId/devices
+ * GET·POST·PATCH·DELETE /api/v1/sites/:siteId/devices
  */
 import type { FastifyInstance } from "fastify";
 import type pg from "pg";
@@ -8,6 +8,7 @@ import { requireSiteMember } from "../sites/access.js";
 import { actSiteDevice } from "./act.js";
 import { createSiteDevice } from "./create.js";
 import { integrateSiteDevice } from "./integrate.js";
+import { removeSiteDevice, updateSiteDevice } from "./mutate.js";
 import { listSiteDevices } from "./store.js";
 
 export const registerDeviceRoutes = (app: FastifyInstance, pool: pg.Pool): void => {
@@ -35,6 +36,26 @@ export const registerDeviceRoutes = (app: FastifyInstance, pool: pg.Pool): void 
     }
     const deviceId = (request.params as { deviceId: string }).deviceId;
     const result = await actSiteDevice(pool, member.siteId, deviceId, request.body);
+    return reply.code(result.status).send(result.body);
+  });
+
+  app.patch("/api/v1/sites/:siteId/devices/:deviceId", async (request, reply) => {
+    const member = await requireSiteMember(pool, request, reply);
+    if (!member || !requireCsrf(request, reply)) {
+      return;
+    }
+    const deviceId = (request.params as { deviceId: string }).deviceId;
+    const result = await updateSiteDevice(pool, member.siteId, deviceId, request.body);
+    return reply.code(result.status).send(result.body);
+  });
+
+  app.delete("/api/v1/sites/:siteId/devices/:deviceId", async (request, reply) => {
+    const member = await requireSiteMember(pool, request, reply);
+    if (!member || !requireCsrf(request, reply)) {
+      return;
+    }
+    const deviceId = (request.params as { deviceId: string }).deviceId;
+    const result = await removeSiteDevice(pool, member.siteId, deviceId);
     return reply.code(result.status).send(result.body);
   });
 

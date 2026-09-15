@@ -6,10 +6,10 @@
 
 | 화면 | 내용 |
 | --- | --- |
-| `/` 기기 | 지금 상태. 타일을 누르면 켜기·끄기·값 변경. 센서·날씨는 목록에만 |
-| `/devices` | 이름, 종류, 현재값, 동작, 연결. entity id 없음 |
+| `/` 기기 | 집 기기와 가상 기기를 나눔. 타일을 누르면 켜기·끄기·값 변경. 센서·날씨는 목록에만 |
+| `/devices` | 이름, 종류, 구분(집/가상), 현재값, 동작, 연결, 수정·삭제. entity id 없음 |
 | 편집기 Trigger | 숫자 기기 select. 저장 `{ kind: "device.changed", config: { deviceId, inputKey } }` |
-| 편집기 Effect | adapter `device` / `action`. 저장 `inputs.request = { deviceId, action, data? }` |
+| 편집기 Effect | adapter `device` / `action`. 가상은 `이름 · 가상`. 저장 `inputs.request = { deviceId, action, data? }` |
 
 빈 목록: "아직 기기가 없습니다. 위에서 연결하거나 허브 기기를 기다립니다."
 
@@ -32,7 +32,7 @@
 ```text
 HA get_states / state_changed
 → runtime devices (id, entity_id, name, kind)
-→ devices.snapshot (id, name, kind, actions, available, state?, reading?)  // entity_id 없음
+→ devices.snapshot (id, name, kind, actions, available, origin?, state?, reading?)  // entity_id 없음. origin은 집(ha)/가상
 → API site_devices
 → /devices · 편집기 select
 → 초안 / artifact 의 deviceId
@@ -45,16 +45,18 @@ HA get_states / state_changed
 
 - `GET /api/v1/sites/:siteId/devices`
 - `POST /api/v1/sites/:siteId/devices/:deviceId/actions` `{ action, data? }`. 응답 `{ device }`. `entity_id` 없음
+- `PATCH /api/v1/sites/:siteId/devices/:deviceId` `{ name }`. 응답 `{ device }`
+- `DELETE /api/v1/sites/:siteId/devices/:deviceId`. 가상과 시험 스위치·숫자만. 그 외 집 기기는 거절. 응답 `{ deviceId }`
 - `POST /api/v1/sites/:siteId/devices` `{ name, kind? }` 또는 `{ name, product }`. `boolean`/`number`만 HA helper. 그 외와 제품은 runtime 가상. YAML은 화면에서 풀어 이 API를 여러 번 호출합니다. 응답 `{ device, devices }`
 - `POST /api/v1/sites/:siteId/devices/integrations` `{ integration?, token?, values?, list? }`
 - WSS `devices.integrate` → `devices.integrated`. 허용 목록 밖의 통합·`entity_id`·HA `flow_id`·접속 키는 클라우드에 없음
 - 허용 목록은 `@howling/contracts` `DEVICE_INTEGRATIONS`. UI는 제품 이름만 보여 줍니다.
-- MCP `list_devices` (`read`), `create_device` (`edit`). 응답은 summary만
-- WSS `devices.create` → `devices.created`. WSS `devices.action` → `devices.acted`. 둘 다 `entity_id` 없음
+- MCP `list_devices` (`read`), `create_device`·`update_device`·`delete_device` (`edit`). 응답은 summary만
+- WSS `devices.create` → `devices.created`. WSS `devices.action` → `devices.acted`. WSS `devices.update` → `devices.updated`. WSS `devices.delete` → `devices.deleted`. 모두 `entity_id` 없음
 
 숫자 helper 기본값: min 0, max 10000, step 1. 이미 같은 이름이 있으면 그 기기를 돌려줍니다.
 
-가상 기기는 폼 또는 YAML입니다. `entity_id`는 넣지 않습니다. 제품 한 줄은 서버가 여러 기기로 펼칩니다.
+가상 기기는 폼 또는 YAML입니다. `entity_id`는 넣지 않습니다. 제품 한 줄은 서버가 여러 기기로 펼칩니다. 대시보드와 목록은 집 기기와 가상 기기를 나눕니다. 화면 문구는 「집」과 「가상」입니다. 이름은 모든 기기에서 바꿀 수 있습니다. 삭제는 가상 기기와 허브에서 만든 시험 스위치·숫자만 됩니다. YAML로 넣은 시험 스위치와 집의 조명·플레이어는 허브에서 빼야 합니다.
 
 ```yaml
 - name: 작업실 TV

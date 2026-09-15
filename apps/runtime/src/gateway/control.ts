@@ -8,7 +8,9 @@ import {
   detailRequestSchema,
   deviceActionInvokeSchema,
   deviceCreateRequestSchema,
+  deviceDeleteRequestSchema,
   deviceIntegrateRequestSchema,
+  deviceUpdateRequestSchema,
   effectFixtureSchema,
   oauthCodePayloadSchema,
   runCommandPayloadSchema,
@@ -18,8 +20,12 @@ import {
   type DeviceActionResult,
   type DeviceCreateRequest,
   type DeviceCreateResult,
+  type DeviceDeleteRequest,
+  type DeviceDeleteResult,
   type DeviceIntegrateRequest,
   type DeviceIntegrateResult,
+  type DeviceUpdateRequest,
+  type DeviceUpdateResult,
   type RevisionArtifact,
   type RuntimeEnvelope,
 } from "@howling/contracts";
@@ -43,6 +49,8 @@ export type CloudControlExtras = {
   readonly onDevicesCreate?: (payload: DeviceCreateRequest) => Promise<DeviceCreateResult>;
   readonly onDevicesIntegrate?: (payload: DeviceIntegrateRequest) => Promise<DeviceIntegrateResult>;
   readonly onDevicesAction?: (payload: DeviceActionInvoke) => Promise<DeviceActionResult>;
+  readonly onDevicesUpdate?: (payload: DeviceUpdateRequest) => Promise<DeviceUpdateResult>;
+  readonly onDevicesDelete?: (payload: DeviceDeleteRequest) => Promise<DeviceDeleteResult>;
 };
 
 export const handleCloudControl = (
@@ -95,6 +103,40 @@ const dispatchCloudControl = (
         gateway.send("devices.acted", {
           requestId: payload.requestId,
           error: "기기를 바꾸지 못했습니다.",
+        });
+      });
+    return;
+  }
+  if (envelope.type === "devices.update") {
+    const payload = deviceUpdateRequestSchema.parse(envelope.payload);
+    void Promise.resolve(extras?.onDevicesUpdate?.(payload))
+      .then((result) => {
+        gateway.send(
+          "devices.updated",
+          result ?? { requestId: payload.requestId, error: "runtime cannot update devices" },
+        );
+      })
+      .catch(() => {
+        gateway.send("devices.updated", {
+          requestId: payload.requestId,
+          error: "이름을 바꾸지 못했습니다.",
+        });
+      });
+    return;
+  }
+  if (envelope.type === "devices.delete") {
+    const payload = deviceDeleteRequestSchema.parse(envelope.payload);
+    void Promise.resolve(extras?.onDevicesDelete?.(payload))
+      .then((result) => {
+        gateway.send(
+          "devices.deleted",
+          result ?? { requestId: payload.requestId, error: "runtime cannot delete devices" },
+        );
+      })
+      .catch(() => {
+        gateway.send("devices.deleted", {
+          requestId: payload.requestId,
+          error: "기기를 지우지 못했습니다.",
         });
       });
     return;

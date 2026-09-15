@@ -110,7 +110,7 @@ export const startHaConnector = (input: HaConnectorInput): HaHandle => {
         event?: {
           data?: {
             entity_id?: string;
-            new_state?: { state?: string; attributes?: { friendly_name?: string } };
+            new_state?: { state?: string; attributes?: { friendly_name?: string; editable?: boolean } };
             old_state?: { state?: string };
           };
         };
@@ -190,7 +190,7 @@ export const startHaConnector = (input: HaConnectorInput): HaHandle => {
         const previous = known.get(entityId);
         known.set(entityId, next);
         const friendlyName = data.new_state?.attributes?.friendly_name;
-        const attrs = publicAttrsOf(data.new_state?.attributes);
+        const attrs = attrsOf(data.new_state?.attributes);
         input.onEvent({
           entityId,
           state: next,
@@ -287,11 +287,19 @@ type HaStateRow = {
 };
 
 const rowOf = (item: HaStateRow): HaEntityRow => {
-  const attrs = publicAttrsOf(item.attributes);
+  const attrs = attrsOf(item.attributes);
   return {
     entityId: item.entity_id ?? "",
     state: item.state ?? "",
     ...(item.attributes?.friendly_name ? { friendlyName: item.attributes.friendly_name } : {}),
     ...(Object.keys(attrs).length > 0 ? { attrs } : {}),
   };
+};
+
+const attrsOf = (raw: HaStateRow["attributes"]): Record<string, string | number | boolean> => {
+  const attrs = publicAttrsOf(raw);
+  if (typeof raw?.editable === "boolean") {
+    attrs.editable = raw.editable;
+  }
+  return attrs;
 };

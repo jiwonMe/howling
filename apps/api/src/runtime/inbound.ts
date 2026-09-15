@@ -6,7 +6,9 @@ import {
   connectionsSnapshotSchema,
   deviceActionResultSchema,
   deviceCreateResultSchema,
+  deviceDeleteResultSchema,
   deviceIntegrateResultSchema,
+  deviceUpdateResultSchema,
   devicesSnapshotSchema,
   observeBatchSchema,
   rawBatchSchema,
@@ -21,7 +23,8 @@ import { appendStreamRow } from "../data/streams.js";
 import { acceptDeviceActed } from "../devices/act.js";
 import { acceptDeviceCreated } from "../devices/create.js";
 import { acceptDeviceIntegrated } from "../devices/integrate.js";
-import { replaceSiteDevices, upsertSiteDevice } from "../devices/store.js";
+import { acceptDeviceDeleted, acceptDeviceUpdated } from "../devices/mutate.js";
+import { deleteSiteDevice, replaceSiteDevices, upsertSiteDevice } from "../devices/store.js";
 import { setDeploymentStatus } from "../flows/store.js";
 import { appendSummaryBatch } from "../flows/journal.js";
 import { upsertRunSummary } from "../flows/runs.js";
@@ -160,6 +163,28 @@ const dispatchRuntimeControl = async (
       await upsertSiteDevice(pool, envelope.siteId, parsed.data.device);
     }
     acceptDeviceActed(parsed.data);
+    return;
+  }
+  if (envelope.type === "devices.updated") {
+    const parsed = deviceUpdateResultSchema.safeParse(envelope.payload);
+    if (!parsed.success) {
+      return;
+    }
+    if (parsed.data.device) {
+      await upsertSiteDevice(pool, envelope.siteId, parsed.data.device);
+    }
+    acceptDeviceUpdated(parsed.data);
+    return;
+  }
+  if (envelope.type === "devices.deleted") {
+    const parsed = deviceDeleteResultSchema.safeParse(envelope.payload);
+    if (!parsed.success) {
+      return;
+    }
+    if (parsed.data.deviceId && !parsed.data.error) {
+      await deleteSiteDevice(pool, envelope.siteId, parsed.data.deviceId);
+    }
+    acceptDeviceDeleted(parsed.data);
     return;
   }
   if (envelope.type === "devices.created") {

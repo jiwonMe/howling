@@ -22,6 +22,7 @@ import { createDeviceAwareAdapter } from "./devices/adapter.js";
 import { handleDevicesAction } from "./devices/act.js";
 import { handleDevicesCreate } from "./devices/create.js";
 import { handleDevicesIntegrate } from "./devices/integrate.js";
+import { handleDevicesDelete, handleDevicesUpdate } from "./devices/mutate.js";
 import { reportDevices } from "./devices/report.js";
 import { syncDeviceCatalog, upsertDevices } from "./devices/store.js";
 import { dispatchDeviceTriggers } from "./devices/triggers.js";
@@ -114,6 +115,20 @@ gateway = startRuntimeGateway(
           payload,
         );
         if (result.status === "done") {
+          reportDevices(gateway, db);
+        }
+        return result;
+      },
+      onDevicesUpdate: async (payload) => {
+        const result = await handleDevicesUpdate({ db, ...(ha ? { ha } : {}) }, payload);
+        if (result.device) {
+          reportDevices(gateway, db);
+        }
+        return result;
+      },
+      onDevicesDelete: async (payload) => {
+        const result = await handleDevicesDelete({ db, ...(ha ? { ha } : {}) }, payload);
+        if (result.deviceId && !result.error) {
           reportDevices(gateway, db);
         }
         return result;

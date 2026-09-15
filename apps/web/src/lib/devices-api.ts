@@ -1,5 +1,5 @@
 /**
- * 기기 목록·추가. entity_id는 응답에 없다.
+ * 기기 목록·추가·수정·삭제. entity_id는 응답에 없다.
  */
 import type {
   DeviceActionBody,
@@ -7,6 +7,7 @@ import type {
   DeviceIntegrateBody,
   DeviceIntegrateResult,
   DeviceSummary,
+  DeviceUpdateBody,
 } from "@howling/contracts";
 import { UnauthorizedError } from "./api.js";
 
@@ -73,6 +74,46 @@ export const actDevice = async (
   }
   const parsed = (await response.json()) as { device: DeviceSummary };
   return parsed.device;
+};
+
+export const updateDevice = async (
+  siteId: string,
+  csrf: string,
+  deviceId: string,
+  body: DeviceUpdateBody,
+): Promise<DeviceSummary> => {
+  const response = await fetch(`/api/v1/sites/${siteId}/devices/${deviceId}`, {
+    method: "PATCH",
+    credentials: "same-origin",
+    headers: { "content-type": "application/json", "x-csrf-token": csrf },
+    body: JSON.stringify(body),
+  });
+  if (response.status === 401) {
+    throw new UnauthorizedError();
+  }
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  const parsed = (await response.json()) as { device: DeviceSummary };
+  return parsed.device;
+};
+
+export const deleteDevice = async (
+  siteId: string,
+  csrf: string,
+  deviceId: string,
+): Promise<void> => {
+  const response = await fetch(`/api/v1/sites/${siteId}/devices/${deviceId}`, {
+    method: "DELETE",
+    credentials: "same-origin",
+    headers: { "x-csrf-token": csrf },
+  });
+  if (response.status === 401) {
+    throw new UnauthorizedError();
+  }
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
 };
 
 export const integrateDevice = async (

@@ -161,6 +161,9 @@ export const summariesOf = (rows: readonly DeviceRow[]) =>
       actions: [...actionsOf(row.kind)],
       numeric: row.numeric,
       available: row.available,
+      origin: row.origin,
+      deletable:
+        row.origin === "virtual" || (isHelperEntity(row.entityId) && row.attrs.editable !== false),
       ...(row.state && !looksLikeEntityId(row.state) ? { state: row.state.slice(0, 64) } : {}),
       ...(reading && !looksLikeEntityId(reading) ? { reading } : {}),
     };
@@ -177,6 +180,24 @@ export const mapDeviceRow = (row: Record<string, unknown>): DeviceRow => ({
   state: typeof row.state === "string" ? row.state : "",
   attrs: attrsOf(row.attrs_json),
 });
+
+export const renameDevice = (db: Database.Database, id: string, name: string): DeviceRow | undefined => {
+  db.prepare(`UPDATE devices SET name = ?, updated_at = ? WHERE id = ?`).run(
+    name,
+    new Date().toISOString(),
+    id,
+  );
+  return getDevice(db, id);
+};
+
+export const removeDevice = (db: Database.Database, id: string): void => {
+  db.prepare(`DELETE FROM devices WHERE id = ?`).run(id);
+};
+
+export const isHelperEntity = (entityId: string): boolean => {
+  const domain = entityId.split(".")[0];
+  return domain === "input_boolean" || domain === "input_number";
+};
 
 const mapRow = mapDeviceRow;
 

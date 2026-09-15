@@ -9,12 +9,18 @@ import {
   deviceActionResultSchema,
   deviceCreateBodySchema,
   deviceCreateResultSchema,
+  deviceDeleteRequestSchema,
+  deviceDeleteResultSchema,
+  deviceUpdateBodySchema,
+  deviceUpdateRequestSchema,
   deviceIntegrateBodySchema,
   deviceIntegrateResultSchema,
   deviceSummarySchema,
   devicesSnapshotSchema,
   fieldsOf,
   onDeviceBoard,
+  originLabel,
+  originOf,
   productPartsOf,
   readingOf,
   reservedRuntimeMessageTypes,
@@ -32,6 +38,19 @@ describe("device catalog contracts", () => {
       available: true,
     });
     expect(parsed.id).toBe("dev_abc");
+    expect(originOf(parsed)).toBe("ha");
+    expect(originLabel({ origin: "virtual" })).toBe("가상");
+    expect(
+      deviceSummarySchema.parse({
+        id: "dev_tv",
+        name: "작업실 TV",
+        kind: "player",
+        actions: [],
+        numeric: false,
+        available: true,
+        origin: "virtual",
+      }).origin,
+    ).toBe("virtual");
   });
 
   it("rejects entityId on a device summary", () => {
@@ -105,6 +124,10 @@ describe("device catalog contracts", () => {
     expect(reservedRuntimeMessageTypes).toContain("devices.integrated");
     expect(reservedRuntimeMessageTypes).toContain("devices.action");
     expect(reservedRuntimeMessageTypes).toContain("devices.acted");
+    expect(reservedRuntimeMessageTypes).toContain("devices.update");
+    expect(reservedRuntimeMessageTypes).toContain("devices.updated");
+    expect(reservedRuntimeMessageTypes).toContain("devices.delete");
+    expect(reservedRuntimeMessageTypes).toContain("devices.deleted");
     expect(
       deviceActionInvokeSchema.parse({ requestId: "req_a", deviceId: "dev_abc", action: "turn_off" })
         .action,
@@ -117,6 +140,20 @@ describe("device catalog contracts", () => {
     ).toThrow();
     expect(MCP_TOOL_SCOPES.list_devices).toEqual(["read"]);
     expect(MCP_TOOL_SCOPES.create_device).toEqual(["edit"]);
+    expect(MCP_TOOL_SCOPES.update_device).toEqual(["edit"]);
+    expect(MCP_TOOL_SCOPES.delete_device).toEqual(["edit"]);
+    expect(deviceUpdateBodySchema.parse({ name: "  작업실 TV  " })).toEqual({ name: "작업실 TV" });
+    expect(deviceUpdateBodySchema.safeParse({ name: "media_player.living" }).success).toBe(false);
+    expect(
+      deviceUpdateRequestSchema.parse({ requestId: "req_u", deviceId: "dev_tv", name: "작업실 TV" })
+        .deviceId,
+    ).toBe("dev_tv");
+    expect(deviceDeleteRequestSchema.parse({ requestId: "req_d", deviceId: "dev_tv" }).deviceId).toBe(
+      "dev_tv",
+    );
+    expect(() =>
+      deviceDeleteResultSchema.parse({ requestId: "req_d", entityId: "input_boolean.x" }),
+    ).toThrow();
     const snap = devicesSnapshotSchema.parse({ devices: [] });
     expect(snap.devices).toEqual([]);
   });

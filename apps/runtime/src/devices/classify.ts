@@ -46,6 +46,9 @@ const KIND_BY_DOMAIN: Readonly<Record<string, DeviceKind>> = {
 
 export const domainOf = (entityId: string): string => entityId.split(".")[0] ?? "";
 
+export const helperItemIdOf = (entityId: string): string =>
+  entityId.slice(domainOf(entityId).length + 1);
+
 export const classifyEntity = (entityId: string, state: string): ClassifiedDevice | undefined => {
   const domain = domainOf(entityId);
   const numeric = parseHaNumber(state) !== undefined;

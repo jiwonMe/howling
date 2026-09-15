@@ -1,7 +1,14 @@
 /**
  * 허브가 올린 기기. entity_id는 보여주지 않는다.
  */
-import { actionLabel, DEVICE_KIND_LABELS, stateLabel, type DeviceSummary } from "@howling/contracts";
+import {
+  actionLabel,
+  DEVICE_KIND_LABELS,
+  originLabel,
+  originOf,
+  stateLabel,
+  type DeviceSummary,
+} from "@howling/contracts";
 import { useEffect, useState } from "react";
 import { loginHref, UnauthorizedError } from "../lib/api.js";
 import { haStatus } from "../lib/dashboard.js";
@@ -10,6 +17,7 @@ import { loadStatus } from "../lib/status.js";
 import { caption, header, page, subtitle, title } from "../ui/layout.css.js";
 import { empty, tableCell, tableHead, tableWrap } from "../ui/table.css.js";
 import { DeviceConnectForm } from "./device-connect-form.js";
+import { DeviceManage } from "./device-manage.js";
 
 export const DevicesPage = () => {
   const [devices, setDevices] = useState<DeviceSummary[]>();
@@ -97,6 +105,9 @@ export const DevicesPage = () => {
                   종류
                 </th>
                 <th className={tableHead} scope="col">
+                  구분
+                </th>
+                <th className={tableHead} scope="col">
                   현재
                 </th>
                 <th className={tableHead} scope="col">
@@ -105,13 +116,17 @@ export const DevicesPage = () => {
                 <th className={tableHead} scope="col">
                   연결
                 </th>
+                <th className={tableHead} scope="col">
+                  관리
+                </th>
               </tr>
             </thead>
             <tbody>
               {devices.map((item) => (
-                <tr key={item.id}>
+                <tr data-origin={originOf(item)} data-testid="device-row" key={item.id}>
                   <td className={tableCell}>{item.name}</td>
                   <td className={tableCell}>{DEVICE_KIND_LABELS[item.kind]}</td>
+                  <td className={tableCell}>{originLabel(item)}</td>
                   <td className={tableCell}>
                     {item.available ? stateLabel(item.state) : "불가"}
                     {item.available && item.reading ? ` · ${item.reading}` : ""}
@@ -120,6 +135,17 @@ export const DevicesPage = () => {
                     {item.actions.map((action) => actionLabel(action)).join(", ") || "—"}
                   </td>
                   <td className={tableCell}>{item.available ? "사용 가능" : "불가"}</td>
+                  <td className={tableCell}>
+                    <DeviceManage
+                      csrf={csrf}
+                      device={item}
+                      siteId={siteId}
+                      onDevice={(device) => setDevices((current) => mergeDevice(current ?? [], device))}
+                      onGone={(deviceId) =>
+                        setDevices((current) => (current ?? []).filter((row) => row.id !== deviceId))
+                      }
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>

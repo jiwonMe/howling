@@ -1,7 +1,7 @@
 /**
  * 선택 노드 binding·trigger.
  */
-import type { DeviceSummary, TriggerBinding } from "@howling/contracts";
+import { originOf, type DeviceSummary, type TriggerBinding } from "@howling/contracts";
 import type { InputBinding, WorkflowDefinition } from "@howling/core";
 import { field, input, label, select } from "../ui/form.css.js";
 import { cardTitle } from "../ui/card.css.js";
@@ -109,7 +109,7 @@ const TriggerFields = (props: {
             <option value="">선택</option>
             {triggerable.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.name}
+                {originOf(item) === "virtual" ? `${item.name} · 가상` : item.name}
               </option>
             ))}
           </select>

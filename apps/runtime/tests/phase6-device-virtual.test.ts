@@ -52,6 +52,7 @@ describe("phase 6 virtual composite devices", () => {
     expect(JSON.stringify(created)).not.toContain("media_player.");
     expect(JSON.stringify(created)).not.toContain("remote.");
     expect(JSON.stringify(created)).not.toContain("entityId");
+    expect(created.devices?.every((item) => item.origin === "virtual")).toBe(true);
     expect(listDevices(db).every((row) => row.origin === "virtual")).toBe(true);
     expect(listDevices(db).every((row) => row.entityId.startsWith("virtual:"))).toBe(true);
     syncDeviceCatalog(db, "runtime_dev", [

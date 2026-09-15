@@ -91,6 +91,7 @@ describe("phase 6 device catalog", () => {
     expect(JSON.stringify(payload)).not.toContain("input_number");
     expect(JSON.stringify(payload)).not.toContain("entityId");
     expect(payload.devices[0]?.state).toBe("0");
+    expect(payload.devices[0]?.origin).toBe("ha");
     upsertDevices(db, runtimeId, [
       {
         entityId: "media_player.living",
@@ -102,6 +103,7 @@ describe("phase 6 device catalog", () => {
     const player = summariesOf(listDevices(db)).find((item) => item.name === "거실 TV");
     expect(player?.state).toBe("playing");
     expect(player?.reading).toBe("볼륨 40%");
+    expect(player?.origin).toBe("ha");
     expect(JSON.stringify(player)).not.toContain("media_player");
     db.close();
   });

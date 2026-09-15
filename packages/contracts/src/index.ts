@@ -145,7 +145,9 @@ export {
 export {
   DEVICE_ACTION_LABELS,
   DEVICE_KIND_LABELS,
+  DEVICE_ORIGIN_LABELS,
   actionLabel,
+  deviceOriginSchema,
   creatableDeviceKindSchema,
   deviceActionBodySchema,
   deviceActionInvokeSchema,
@@ -161,7 +163,23 @@ export {
   devicesSnapshotSchema,
   helperDeviceKindSchema,
   isHelperCreate,
+  originLabel,
+  originOf,
 } from "./devices.js";
+export {
+  deviceDeleteRequestSchema,
+  deviceDeleteResultSchema,
+  deviceUpdateBodySchema,
+  deviceUpdateRequestSchema,
+  deviceUpdateResultSchema,
+} from "./device-mutate.js";
+export type {
+  DeviceDeleteRequest,
+  DeviceDeleteResult,
+  DeviceUpdateBody,
+  DeviceUpdateRequest,
+  DeviceUpdateResult,
+} from "./device-mutate.js";
 export { actionsOf, fieldsOf } from "./device-services.js";
 export type { DeviceActionField, DeviceService } from "./device-services.js";
 export {
@@ -186,6 +204,7 @@ export type {
   DeviceCreateRequest,
   DeviceCreateResult,
   DeviceKind,
+  DeviceOrigin,
   DeviceSummary,
   DeviceTriggerConfig,
   DevicesSnapshot,

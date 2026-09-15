@@ -5,6 +5,8 @@ import {
   actionLabel,
   DEVICE_KIND_LABELS,
   fieldsOf,
+  originLabel,
+  originOf,
   stateLabel,
   type DeviceAction,
   type DeviceSummary,
@@ -17,6 +19,7 @@ import { buttonRecipe } from "../ui/button.css.js";
 import { errorText, field, formStack, label, select } from "../ui/form.css.js";
 import { caption } from "../ui/layout.css.js";
 import { dialog, dialogNow, dialogTitle, quickRow } from "./device-dialog.css.js";
+import { DeviceManage } from "./device-manage.js";
 
 const QUICK = ["turn_on", "turn_off", "toggle", "media_play", "media_pause", "media_stop"] as const;
 
@@ -26,6 +29,7 @@ export const DeviceDialog = (props: {
   readonly csrf: string;
   readonly onClose: () => void;
   readonly onDevice: (device: DeviceSummary) => void;
+  readonly onGone: (deviceId: string) => void;
 }) => {
   const ref = useRef<HTMLDialogElement>(null);
   const [action, setAction] = useState<DeviceAction>(props.device.actions[0] ?? "");
@@ -89,7 +93,10 @@ export const DeviceDialog = (props: {
     <dialog className={dialog} data-testid="device-dialog" ref={ref}>
       <div className={formStack}>
         <h2 className={dialogTitle}>{props.device.name}</h2>
-        <p className={caption}>{DEVICE_KIND_LABELS[props.device.kind]}</p>
+        <p className={caption}>
+          {DEVICE_KIND_LABELS[props.device.kind]} · {originLabel(props.device)}
+        </p>
+        {originOf(props.device) === "virtual" ? <p className={caption}>플로 시험용입니다.</p> : null}
         <p className={dialogNow}>{props.device.available ? stateLabel(props.device.state) : "불가"}</p>
         {props.device.available && props.device.reading ? (
           <p className={caption}>{props.device.reading}</p>
@@ -150,6 +157,13 @@ export const DeviceDialog = (props: {
           </div>
         ) : null}
         {error ? <p className={errorText}>{error}</p> : null}
+        <DeviceManage
+          csrf={props.csrf}
+          device={props.device}
+          siteId={props.siteId}
+          onDevice={props.onDevice}
+          onGone={props.onGone}
+        />
         <button
           className={buttonRecipe()}
           data-testid="device-dialog-close"

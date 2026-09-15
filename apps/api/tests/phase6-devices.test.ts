@@ -4,6 +4,7 @@ import { closeApi, loginCookies, postgresUp, startApi } from "./helpers.js";
 
 const snapshotOf = (
   ctx: Awaited<ReturnType<typeof startApi>>,
+  siteId: string,
   messageId: string,
   devices: readonly Record<string, unknown>[],
 ) =>
@@ -11,7 +12,7 @@ const snapshotOf = (
     protocolVersion: 1,
     messageId,
     runtimeId: ctx.config.bootstrapRuntimeId,
-    siteId: ctx.config.bootstrapSiteId,
+    siteId,
     connectionGeneration: 1,
     type: "devices.snapshot",
     payload: { devices },
@@ -39,10 +40,20 @@ const alert = {
 describe.skipIf(!postgresUp)("phase 6 devices", () => {
   it("stores a snapshot, lists it, and keeps entity ids out of cloud rows", async () => {
     const ctx = await startApi();
+    const siteId = "site_device_list";
     try {
       const { cookie, csrf } = await loginCookies(ctx.app, ctx.oidc);
-      const siteId = ctx.config.bootstrapSiteId;
-      await snapshotOf(ctx, "m1", [power, alert]);
+      await ctx.pool.query(
+        `INSERT INTO sites (id, name, created_at) VALUES ($1, $2, now()) ON CONFLICT (id) DO NOTHING`,
+        [siteId, "Device List"],
+      );
+      await ctx.pool.query(
+        `INSERT INTO memberships (site_id, user_id, role)
+         SELECT $1, user_id, 'owner' FROM memberships WHERE site_id = $2
+         ON CONFLICT (site_id, user_id) DO NOTHING`,
+        [siteId, ctx.config.bootstrapSiteId],
+      );
+      await snapshotOf(ctx, siteId, "m1", [power, alert]);
 
       const listed = await ctx.app.inject({
         url: `/api/v1/sites/${siteId}/devices`,
@@ -53,8 +64,31 @@ describe.skipIf(!postgresUp)("phase 6 devices", () => {
       expect(names).toContain("Test Alert");
       expect(names).toContain("Test Power");
       expect(
-        listed.json().devices.find((item: { name: string }) => item.name === "Test Power").state,
+        listed.json().devices.find((item: { id: string }) => item.id === "dev_power").state,
       ).toBe("800");
+      expect(
+        listed.json().devices.find((item: { id: string }) => item.id === "dev_power").origin,
+      ).toBe("ha");
+      await snapshotOf(ctx, siteId, "m1b", [
+        power,
+        alert,
+        {
+          id: "dev_tv",
+          name: "작업실 TV",
+          kind: "player",
+          actions: [],
+          numeric: false,
+          available: true,
+          origin: "virtual",
+        },
+      ]);
+      const withVirtual = await ctx.app.inject({
+        url: `/api/v1/sites/${siteId}/devices`,
+        headers: { cookie },
+      });
+      expect(
+        withVirtual.json().devices.find((item: { id: string }) => item.id === "dev_tv").origin,
+      ).toBe("virtual");
       expect(JSON.stringify(listed.json())).not.toContain("input_number");
       expect(JSON.stringify(listed.json())).not.toContain("entityId");
 
@@ -82,7 +116,7 @@ describe.skipIf(!postgresUp)("phase 6 devices", () => {
       expect(listedMcp.devices.map((item) => item.name)).toContain("Test Power");
       expect(JSON.stringify(listedMcp)).not.toContain("entityId");
 
-      await snapshotOf(ctx, "m2", [power]);
+      await snapshotOf(ctx, siteId, "m2", [power]);
       const after = await ctx.app.inject({
         url: `/api/v1/sites/${siteId}/devices`,
         headers: { cookie },
@@ -181,6 +215,8 @@ describe.skipIf(!postgresUp)("phase 6 devices", () => {
       expect(blob).not.toContain("input_boolean.");
       expect(blob).not.toContain("entity_id");
     } finally {
+      await ctx.pool.query(`DELETE FROM site_devices WHERE site_id = $1`, [siteId]);
+      await ctx.pool.query(`DELETE FROM memberships WHERE site_id = $1`, [siteId]);
       await closeApi(ctx);
     }
   });

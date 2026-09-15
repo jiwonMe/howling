@@ -33,6 +33,10 @@ export const reservedRuntimeMessageTypes = [
   "devices.integrated",
   "devices.action",
   "devices.acted",
+  "devices.update",
+  "devices.updated",
+  "devices.delete",
+  "devices.deleted",
 ] as const;
 
 export type ReservedRuntimeMessageType =

@@ -90,3 +90,16 @@ export const tileReading = style({
   color: vars.color.subtle,
   overflowWrap: "anywhere",
 });
+
+export const group = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: vars.space.xs,
+});
+
+export const groupTitle = style({
+  fontSize: vars.font.md,
+  fontWeight: vars.weight.heading,
+  letterSpacing: "-0.01em",
+  margin: 0,
+});

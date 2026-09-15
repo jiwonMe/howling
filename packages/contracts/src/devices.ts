@@ -120,6 +120,21 @@ export const DEVICE_ACTION_LABELS: Readonly<Record<string, string>> = {
 
 export const actionLabel = (action: string): string => DEVICE_ACTION_LABELS[action] ?? action;
 
+export const deviceOriginSchema = z.enum(["ha", "virtual"]);
+
+export const DEVICE_ORIGIN_LABELS: Readonly<Record<z.infer<typeof deviceOriginSchema>, string>> = {
+  ha: "집",
+  virtual: "가상",
+};
+
+export const originOf = (item: {
+  readonly origin?: z.infer<typeof deviceOriginSchema> | undefined;
+}): z.infer<typeof deviceOriginSchema> => (item.origin === "virtual" ? "virtual" : "ha");
+
+export const originLabel = (item: {
+  readonly origin?: z.infer<typeof deviceOriginSchema> | undefined;
+}): string => DEVICE_ORIGIN_LABELS[originOf(item)];
+
 export const deviceSummarySchema = z
   .object({
     id: z.string().min(1),
@@ -130,6 +145,8 @@ export const deviceSummarySchema = z
     available: z.boolean(),
     state: publicTextSchema.optional(),
     reading: publicTextSchema.optional(),
+    origin: deviceOriginSchema.optional(),
+    deletable: z.boolean().optional(),
   })
   .strict();
 
@@ -201,6 +218,7 @@ export const deviceCreateResultSchema = z
   })
   .strict();
 
+export type DeviceOrigin = z.infer<typeof deviceOriginSchema>;
 export type DeviceKind = z.infer<typeof deviceKindSchema>;
 export type DeviceAction = z.infer<typeof deviceActionSchema>;
 export type DeviceSummary = z.infer<typeof deviceSummarySchema>;

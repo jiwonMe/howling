@@ -115,6 +115,9 @@ export const StatusPage = () => {
         onDevice={(device) => {
           setDevices((current) => current.map((item) => (item.id === device.id ? device : item)));
         }}
+        onGone={(deviceId) => {
+          setDevices((current) => current.filter((item) => item.id !== deviceId));
+        }}
       />
       <section className={section}>
         <h2 className={sectionTitle}>최근 실행</h2>

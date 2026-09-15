@@ -34,8 +34,8 @@ export const upsertSiteDevice = async (
 ): Promise<void> => {
   await pool.query(
     `INSERT INTO site_devices
-       (site_id, id, name, kind, actions_json, numeric, available, state, reading, updated_at)
-     VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, now())
+       (site_id, id, name, kind, actions_json, numeric, available, state, reading, origin, deletable, updated_at)
+     VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11, now())
      ON CONFLICT (site_id, id) DO UPDATE SET
        name = EXCLUDED.name,
        kind = EXCLUDED.kind,
@@ -44,6 +44,8 @@ export const upsertSiteDevice = async (
        available = EXCLUDED.available,
        state = EXCLUDED.state,
        reading = EXCLUDED.reading,
+       origin = EXCLUDED.origin,
+       deletable = EXCLUDED.deletable,
        updated_at = now()`,
     [
       siteId,
@@ -55,6 +57,8 @@ export const upsertSiteDevice = async (
       item.available,
       item.state ?? null,
       item.reading ?? null,
+      item.origin === "virtual" ? "virtual" : "ha",
+      item.deletable === true,
     ],
   );
 };
@@ -72,8 +76,10 @@ export const listSiteDevices = async (
     available: boolean;
     state: string | null;
     reading: string | null;
+    origin: string | null;
+    deletable: boolean | null;
   }>(
-    `SELECT id, name, kind, actions_json, numeric, available, state, reading
+    `SELECT id, name, kind, actions_json, numeric, available, state, reading, origin, deletable
      FROM site_devices WHERE site_id = $1 ORDER BY name`,
     [siteId],
   );
@@ -84,7 +90,17 @@ export const listSiteDevices = async (
     actions: Array.isArray(row.actions_json) ? (row.actions_json as DeviceSummary["actions"]) : [],
     numeric: row.numeric,
     available: row.available,
+    origin: row.origin === "virtual" ? "virtual" : "ha",
+    deletable: row.deletable === true,
     ...(row.state ? { state: row.state } : {}),
     ...(row.reading ? { reading: row.reading } : {}),
   }));
+};
+
+export const deleteSiteDevice = async (
+  pool: pg.Pool,
+  siteId: string,
+  deviceId: string,
+): Promise<void> => {
+  await pool.query(`DELETE FROM site_devices WHERE site_id = $1 AND id = $2`, [siteId, deviceId]);
 };

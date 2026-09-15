@@ -34,7 +34,7 @@ Effect 입력:
 | Tool | Scope |
 | --- | --- |
 | list_flows, get_flow, get_run, get_run_summary, list_devices | `read` |
-| save_draft, validate_flow, create_device | `edit` |
+| save_draft, validate_flow, create_device, update_device, delete_device | `edit` |
 | start_dry_run | `run` |
 | create_revision, deploy_revision | `deploy` |
 | start_live_run | `run` + 활성 배포 |

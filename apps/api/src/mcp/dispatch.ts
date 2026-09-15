@@ -4,6 +4,7 @@
 import {
   MCP_TOOL_SCOPES,
   deviceCreateBodySchema,
+  deviceUpdateBodySchema,
   draftSaveSchema,
   deployRequestSchema,
   testSessionRequestSchema,
@@ -24,6 +25,7 @@ import {
 import { startDryRun } from "../flows/start-dry-run.js";
 import { startLiveRun } from "../flows/start-live-run.js";
 import { createDeviceFor } from "../devices/create.js";
+import { deleteDeviceFor, updateDeviceFor } from "../devices/mutate.js";
 import { listDevicesFor } from "../devices/read.js";
 
 type ToolName = keyof typeof MCP_TOOL_SCOPES;
@@ -63,6 +65,29 @@ const invoke = async (
       };
     }
     return createDeviceFor(pool, actor, parsed.data);
+  }
+  if (name === "update_device") {
+    const deviceId = String(args.deviceId ?? "");
+    const body = deviceUpdateBodySchema.safeParse({ name: args.name });
+    if (!body.success || deviceId === "") {
+      return {
+        ok: false,
+        status: 400,
+        body: { error: { code: "invalid_request", message: "deviceId and name required" } },
+      };
+    }
+    return updateDeviceFor(pool, actor, deviceId, body.data);
+  }
+  if (name === "delete_device") {
+    const deviceId = String(args.deviceId ?? "");
+    if (deviceId === "") {
+      return {
+        ok: false,
+        status: 400,
+        body: { error: { code: "invalid_request", message: "deviceId required" } },
+      };
+    }
+    return deleteDeviceFor(pool, actor, deviceId);
   }
   if (name === "get_flow") {
     return getFlowFor(pool, actor, flowId);
