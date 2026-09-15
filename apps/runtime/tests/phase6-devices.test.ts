@@ -31,11 +31,25 @@ describe("phase 6 device catalog", () => {
   it("classifies domains and hides the entity id in the name", () => {
     expect(classifyEntity("input_number.test_power", "800")?.kind).toBe("number");
     expect(classifyEntity("input_boolean.test_alert", "off")?.actions).toContain("turn_on");
-    expect(classifyEntity("media_player.living", "idle")).toEqual({
-      kind: "player",
-      actions: ["turn_on", "turn_off"],
+    expect(classifyEntity("media_player.living", "idle")?.kind).toBe("player");
+    expect(classifyEntity("media_player.living", "idle")?.actions).toContain("play_media");
+    expect(classifyEntity("climate.kitchen_fridge", "cool")?.kind).toBe("climate");
+    expect(classifyEntity("climate.kitchen_fridge", "cool")?.actions).toContain("set_temperature");
+    expect(classifyEntity("cover.blind", "open")?.actions).toEqual(
+      expect.arrayContaining(["open", "close", "stop", "toggle", "set_cover_position"]),
+    );
+    expect(classifyEntity("lock.door", "locked")?.actions).toEqual(
+      expect.arrayContaining(["lock", "unlock", "open"]),
+    );
+    expect(classifyEntity("vacuum.roomba", "docked")?.actions).toEqual(
+      expect.arrayContaining(["start", "pause", "stop", "dock", "locate"]),
+    );
+    expect(classifyEntity("binary_sensor.fridge_door", "on")).toEqual({
+      kind: "binary",
+      actions: [],
       numeric: false,
     });
+    expect(classifyEntity("sensor.fridge_mode", "express")?.kind).toBe("sensor");
     expect(classifyEntity("sun.sun", "above_horizon")).toBeUndefined();
     expect(displayNameOf("input_number.test_power", "Test Power")).toBe("Test Power");
     expect(displayNameOf("input_number.test_power")).toBe("test power");
@@ -58,6 +72,7 @@ describe("phase 6 device catalog", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.id).toBe(first);
     expect(rows[0]?.numeric).toBe(true);
+    expect(rows[0]?.state).toBe("2");
     db.close();
   });
 
@@ -75,6 +90,19 @@ describe("phase 6 device catalog", () => {
     );
     expect(JSON.stringify(payload)).not.toContain("input_number");
     expect(JSON.stringify(payload)).not.toContain("entityId");
+    expect(payload.devices[0]?.state).toBe("0");
+    upsertDevices(db, runtimeId, [
+      {
+        entityId: "media_player.living",
+        state: "playing",
+        friendlyName: "거실 TV",
+        attrs: { volume_level: 0.4 },
+      },
+    ]);
+    const player = summariesOf(listDevices(db)).find((item) => item.name === "거실 TV");
+    expect(player?.state).toBe("playing");
+    expect(player?.reading).toBe("볼륨 40%");
+    expect(JSON.stringify(player)).not.toContain("media_player");
     db.close();
   });
 

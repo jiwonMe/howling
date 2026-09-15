@@ -63,7 +63,7 @@ describe("phase 6 device adapter", () => {
     db.close();
   });
 
-  it("turns a player on through media_player and rejects toggle", async () => {
+  it("turns a player on and plays media through media_player", async () => {
     const { db } = openTestDb();
     const deviceId = deviceIdOf("runtime_dev", "media_player.living");
     upsertDevices(db, "runtime_dev", [
@@ -100,8 +100,64 @@ describe("phase 6 device adapter", () => {
       service: "turn_on",
       data: { entity_id: "media_player.living" },
     });
-    const toggle = await adapter.execute(requestOf({ deviceId, action: "toggle" }));
-    expect(toggle).toMatchObject({ status: "unknown", reason: "device missing" });
+    const play = await adapter.execute(
+      requestOf({
+        deviceId,
+        action: "play_media",
+        data: { media_content_id: "app:youtube", media_content_type: "app" },
+      }),
+    );
+    expect(play).toMatchObject({ status: "succeeded" });
+    expect(calls[1]).toEqual({
+      domain: "media_player",
+      service: "play_media",
+      data: {
+        entity_id: "media_player.living",
+        media_content_id: "app:youtube",
+        media_content_type: "app",
+      },
+    });
+    db.close();
+  });
+
+  it("maps cover open and vacuum dock to hub services", async () => {
+    const { db } = openTestDb();
+    const coverId = deviceIdOf("runtime_dev", "cover.blind");
+    const vacuumId = deviceIdOf("runtime_dev", "vacuum.roomba");
+    upsertDevices(db, "runtime_dev", [
+      { entityId: "cover.blind", state: "open", friendlyName: "블라인드" },
+      { entityId: "vacuum.roomba", state: "docked", friendlyName: "룸바" },
+    ]);
+    const calls: { domain: string; service: string; data: Record<string, unknown> }[] = [];
+    const ha: HaHandle = {
+      status: () => "ready",
+      lastSyncAt: () => null,
+      callService: async (domain, service, data) => {
+        calls.push({ domain, service, data });
+        return { ok: true };
+      },
+      request: async () => {
+        throw new Error("not used");
+      },
+      rest: async () => {
+        throw new Error("not used");
+      },
+      stop: () => undefined,
+    };
+    const adapter = createDeviceAwareAdapter({
+      db,
+      next: createHaAwareAdapter({
+        fake: createFakeAdapter(),
+        ha: () => ha,
+        testHooks: true,
+      }),
+    });
+    await adapter.execute(requestOf({ deviceId: coverId, action: "open" }));
+    await adapter.execute(requestOf({ deviceId: vacuumId, action: "dock" }));
+    expect(calls).toEqual([
+      { domain: "cover", service: "open_cover", data: { entity_id: "cover.blind" } },
+      { domain: "vacuum", service: "return_to_base", data: { entity_id: "vacuum.roomba" } },
+    ]);
     db.close();
   });
 

@@ -2,13 +2,14 @@
  * Home Assistant WebSocket 연결.
  */
 import WebSocket from "ws";
-import type { HaStatus } from "@howling/contracts";
+import { publicAttrsOf, type HaStatus } from "@howling/contracts";
 import { pendingId, readWsText } from "./ws-parse.js";
 
 export type HaEntityRow = {
   readonly entityId: string;
   readonly state: string;
   readonly friendlyName?: string;
+  readonly attrs?: Record<string, string | number | boolean>;
 };
 
 export type HaEvent = HaEntityRow & {
@@ -189,11 +190,13 @@ export const startHaConnector = (input: HaConnectorInput): HaHandle => {
         const previous = known.get(entityId);
         known.set(entityId, next);
         const friendlyName = data.new_state?.attributes?.friendly_name;
+        const attrs = publicAttrsOf(data.new_state?.attributes);
         input.onEvent({
           entityId,
           state: next,
           ...(previous === undefined ? {} : { previous }),
           ...(friendlyName ? { friendlyName } : {}),
+          ...(Object.keys(attrs).length > 0 ? { attrs } : {}),
         });
       }
     });
@@ -280,11 +283,15 @@ export const startHaConnector = (input: HaConnectorInput): HaHandle => {
 type HaStateRow = {
   readonly entity_id?: string;
   readonly state?: string;
-  readonly attributes?: { readonly friendly_name?: string };
+  readonly attributes?: { readonly friendly_name?: string } & Record<string, unknown>;
 };
 
-const rowOf = (item: HaStateRow): HaEntityRow => ({
-  entityId: item.entity_id ?? "",
-  state: item.state ?? "",
-  ...(item.attributes?.friendly_name ? { friendlyName: item.attributes.friendly_name } : {}),
-});
+const rowOf = (item: HaStateRow): HaEntityRow => {
+  const attrs = publicAttrsOf(item.attributes);
+  return {
+    entityId: item.entity_id ?? "",
+    state: item.state ?? "",
+    ...(item.attributes?.friendly_name ? { friendlyName: item.attributes.friendly_name } : {}),
+    ...(Object.keys(attrs).length > 0 ? { attrs } : {}),
+  };
+};

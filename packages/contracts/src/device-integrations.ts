@@ -20,6 +20,19 @@ export const DEVICE_INTEGRATIONS = [
   { id: "shelly", name: "Shelly", hint: "같은 네트워크의 스위치" },
   { id: "wled", name: "WLED", hint: "주소로 연결하는 LED" },
   { id: "xiaomi_miio", name: "Xiaomi", hint: "미홈 기기" },
+  { id: "lg_thinq", name: "LG ThinQ", hint: "냉장고·세탁기·에어컨" },
+  { id: "smartthings", name: "SmartThings", hint: "삼성 가전과 IoT" },
+  { id: "home_connect", name: "Home Connect", hint: "Bosch·Siemens 가전" },
+  { id: "irobot", name: "iRobot", hint: "룸바·브레이바" },
+  { id: "androidtv", name: "Android TV", hint: "같은 네트워크의 TV" },
+  { id: "denonavr", name: "Denon", hint: "AV 리시버" },
+  { id: "esphome", name: "ESPHome", hint: "같은 네트워크의 보드" },
+  { id: "tasmota", name: "Tasmota", hint: "같은 네트워크의 스위치" },
+  { id: "broadlink", name: "Broadlink", hint: "리모컨 허브" },
+  { id: "harmony", name: "Logitech Harmony", hint: "하모니 허브" },
+  { id: "overkiz", name: "Somfy", hint: "블라인드와 커버" },
+  { id: "gree", name: "Gree", hint: "에어컨" },
+  { id: "mill", name: "Mill", hint: "히터" },
   { id: "sonos", name: "Sonos", hint: "스피커" },
   { id: "cast", name: "Google Cast", hint: "Chromecast와 스피커" },
   { id: "samsungtv", name: "Samsung TV", hint: "같은 네트워크의 TV" },
@@ -35,7 +48,7 @@ export const DEVICE_INTEGRATIONS = [
 export const VIRTUAL_DEVICE = {
   id: "virtual",
   name: "가상 기기",
-  hint: "플로 시험용 스위치·숫자. 집 기기가 아닙니다.",
+  hint: "플로 시험용. 집 기기가 아닙니다.",
 } as const;
 
 const integrationIds = DEVICE_INTEGRATIONS.map((item) => item.id);

@@ -92,6 +92,16 @@ describe.skipIf(!postgresUp)("phase 6 device create", () => {
                 numeric: false,
                 available: true,
               },
+              devices: [
+                {
+                  id: "dev_created",
+                  name: "새 스위치",
+                  kind: "boolean",
+                  actions: ["turn_on", "turn_off", "toggle"],
+                  numeric: false,
+                  available: true,
+                },
+              ],
             },
           }),
         );
@@ -129,6 +139,128 @@ describe.skipIf(!postgresUp)("phase 6 device create", () => {
     } finally {
       await ctx.pool.query(`DELETE FROM site_devices WHERE site_id = $1`, [siteId]);
       await ctx.pool.query(`DELETE FROM runtime_registrations WHERE id = $1`, ["reg_device_create"]);
+      await ctx.pool.query(`DELETE FROM memberships WHERE site_id = $1`, [siteId]);
+      await ctx.pool.query(`DELETE FROM sites WHERE id = $1`, [siteId]);
+      await closeApi(ctx);
+    }
+  }, 20_000);
+
+  it("stores a product create without HA entity ids", async () => {
+    const ctx = await startApi();
+    await ctx.app.ready();
+    const siteId = "site_device_product";
+    const runtimeId = "runtime_device_product";
+    const token = "device-product-token";
+    const devices = [
+      {
+        id: "dev_tv",
+        name: "거실 TV",
+        kind: "player",
+        actions: ["play_media", "volume_set"],
+        numeric: false,
+        available: true,
+      },
+      {
+        id: "dev_remote",
+        name: "거실 TV 리모컨",
+        kind: "remote",
+        actions: ["send_command"],
+        numeric: false,
+        available: true,
+      },
+      {
+        id: "dev_key",
+        name: "거실 TV 키보드",
+        kind: "binary",
+        actions: [],
+        numeric: false,
+        available: true,
+      },
+    ];
+    try {
+      const { cookie, csrf } = await loginCookies(ctx.app, ctx.oidc);
+      await ctx.pool.query(
+        `INSERT INTO sites (id, name, created_at) VALUES ($1, $2, now())
+         ON CONFLICT (id) DO NOTHING`,
+        [siteId, "Device Product"],
+      );
+      await ctx.pool.query(
+        `INSERT INTO memberships (site_id, user_id, role)
+         SELECT $1, user_id, 'owner' FROM memberships WHERE site_id = $2
+         ON CONFLICT (site_id, user_id) DO NOTHING`,
+        [siteId, ctx.config.bootstrapSiteId],
+      );
+      await ctx.pool.query(
+        `INSERT INTO runtime_registrations
+           (id, site_id, runtime_id, token_hash, connection_generation, online, created_at)
+         VALUES ($1, $2, $3, $4, 0, FALSE, now())
+         ON CONFLICT (site_id) DO UPDATE
+           SET runtime_id = EXCLUDED.runtime_id, token_hash = EXCLUDED.token_hash`,
+        ["reg_device_product", siteId, runtimeId, hashToken(token)],
+      );
+      const replyCreate = (ws: { send: (data: string) => void }, raw: unknown) => {
+        const env = JSON.parse(typeof raw === "string" ? raw : String(raw)) as {
+          type?: string;
+          payload?: { requestId?: string };
+        };
+        if (env.type !== "devices.create" || !env.payload?.requestId) {
+          return;
+        }
+        ws.send(
+          JSON.stringify({
+            protocolVersion: 1,
+            messageId: "created-product",
+            runtimeId,
+            siteId,
+            connectionGeneration: 1,
+            type: "devices.created",
+            payload: {
+              requestId: env.payload.requestId,
+              device: devices[0],
+              devices,
+            },
+          }),
+        );
+      };
+      const socket = await ctx.app.injectWS(
+        "/api/v1/runtime/ws",
+        { headers: { authorization: `Bearer ${token}` } },
+        {
+          onOpen: (ws) => {
+            ws.on("message", (raw) => replyCreate(ws, raw));
+            ws.send(
+              JSON.stringify({
+                protocolVersion: 1,
+                messageId: "hello-product",
+                runtimeId,
+                siteId,
+                connectionGeneration: 1,
+                type: "hello",
+                payload: { protocolVersion: 1, capabilities: { connectors: ["homeassistant"] } },
+              }),
+            );
+          },
+        },
+      );
+      socket.on("message", (raw) => replyCreate(socket, raw));
+      await expect
+        .poll(() => runtimeBySite(siteId)?.socket.readyState === 1, { timeout: 5_000 })
+        .toBe(true);
+      const created = await ctx.app.inject({
+        method: "POST",
+        url: `/api/v1/sites/${siteId}/devices`,
+        headers: { cookie, "x-csrf-token": csrf },
+        payload: { name: "거실 TV", product: "apple_tv" },
+      });
+      expect(created.statusCode).toBe(200);
+      expect(created.json().devices).toHaveLength(3);
+      expect(created.json().device.name).toBe("거실 TV");
+      expect(JSON.stringify(created.json())).not.toContain("media_player.");
+      expect(JSON.stringify(created.json())).not.toContain("entityId");
+      socket.close();
+    } finally {
+      await ctx.pool.query(`DELETE FROM site_devices WHERE site_id = $1`, [siteId]);
+      await ctx.pool.query(`DELETE FROM runtime_registrations WHERE id = $1`, ["reg_device_product"]);
       await ctx.pool.query(`DELETE FROM memberships WHERE site_id = $1`, [siteId]);
       await ctx.pool.query(`DELETE FROM sites WHERE id = $1`, [siteId]);
       await closeApi(ctx);

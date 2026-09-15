@@ -2,7 +2,8 @@
  * 기기 목록·추가. entity_id는 응답에 없다.
  */
 import type {
-  CreatableDeviceKind,
+  DeviceActionBody,
+  DeviceCreateBody,
   DeviceIntegrateBody,
   DeviceIntegrateResult,
   DeviceSummary,
@@ -34,9 +35,31 @@ export const getDevices = async (siteId: string): Promise<{ devices: DeviceSumma
 export const createDevice = async (
   siteId: string,
   csrf: string,
-  body: { readonly name: string; readonly kind: CreatableDeviceKind },
-): Promise<DeviceSummary> => {
+  body: DeviceCreateBody,
+): Promise<DeviceSummary[]> => {
   const response = await fetch(`/api/v1/sites/${siteId}/devices`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "content-type": "application/json", "x-csrf-token": csrf },
+    body: JSON.stringify(body),
+  });
+  if (response.status === 401) {
+    throw new UnauthorizedError();
+  }
+  if (!response.ok) {
+    throw new Error(await readError(response));
+  }
+  const parsed = (await response.json()) as { device?: DeviceSummary; devices?: DeviceSummary[] };
+  return parsed.devices ?? (parsed.device ? [parsed.device] : []);
+};
+
+export const actDevice = async (
+  siteId: string,
+  csrf: string,
+  deviceId: string,
+  body: DeviceActionBody,
+): Promise<DeviceSummary> => {
+  const response = await fetch(`/api/v1/sites/${siteId}/devices/${deviceId}/actions`, {
     method: "POST",
     credentials: "same-origin",
     headers: { "content-type": "application/json", "x-csrf-token": csrf },

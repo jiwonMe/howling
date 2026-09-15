@@ -1,0 +1,2 @@
+ALTER TABLE site_devices ADD COLUMN IF NOT EXISTS state TEXT;
+ALTER TABLE site_devices ADD COLUMN IF NOT EXISTS reading TEXT;

@@ -119,9 +119,11 @@ export const DeviceConnectForm = (props: {
               reset();
               setError(undefined);
             }}
-            onCreated={(device) => {
-              reset();
-              props.onDevices([device]);
+            onCreated={(devices, done = true) => {
+              props.onDevices(devices);
+              if (done) {
+                reset();
+              }
             }}
           />
         </div>

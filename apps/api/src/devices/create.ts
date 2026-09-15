@@ -71,7 +71,8 @@ export const createSiteDevice = async (
   }
   const requestId = randomUUID();
   const result = await waitForCreated(siteId, { requestId, ...parsed.data });
-  if (result.error || !result.device) {
+  const devices = result.devices ?? (result.device ? [result.device] : []);
+  if (result.error || devices.length === 0) {
     const offline = result.error === "offline";
     return {
       ok: false,
@@ -82,8 +83,10 @@ export const createSiteDevice = async (
       ),
     };
   }
-  await upsertSiteDevice(pool, siteId, result.device);
-  return { ok: true, status: 200, body: { device: result.device } };
+  for (const device of devices) {
+    await upsertSiteDevice(pool, siteId, device);
+  }
+  return { ok: true, status: 200, body: { device: devices[0], devices } };
 };
 
 const waitForCreated = (

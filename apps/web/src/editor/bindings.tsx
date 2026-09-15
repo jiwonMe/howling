@@ -56,9 +56,10 @@ const TriggerFields = (props: {
   const advanced = props.trigger?.kind === "ha.state_changed";
   const deviceId =
     props.trigger?.kind === "device.changed" ? String(props.trigger.config.deviceId ?? "") : "";
-  const numeric = props.devices.filter(
+  const triggerable = props.devices.filter(
     (item) =>
-      item.kind === "number" && item.numeric && (item.available || item.id === deviceId),
+      (item.available || item.id === deviceId) &&
+      ((item.kind === "number" && item.numeric) || item.kind === "binary"),
   );
   return (
     <>
@@ -84,24 +85,29 @@ const TriggerFields = (props: {
         </label>
       ) : (
         <label className={field}>
-          <span className={label}>숫자 기기</span>
+          <span className={label}>트리거 기기</span>
           <select
             className={select}
             data-testid="trigger-device"
             value={deviceId}
-            onChange={(event) =>
+            onChange={(event) => {
+              const nextId = event.target.value;
+              const picked = triggerable.find((item) => item.id === nextId);
               props.onTriggers([
                 {
                   id: "device-trigger",
                   kind: "device.changed",
                   connectionId: "ha",
-                  config: { deviceId: event.target.value, inputKey: "power" },
+                  config: {
+                    deviceId: nextId,
+                    inputKey: picked?.kind === "binary" ? "value" : "power",
+                  },
                 },
-              ])
-            }
+              ]);
+            }}
           >
             <option value="">선택</option>
-            {numeric.map((item) => (
+            {triggerable.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
               </option>

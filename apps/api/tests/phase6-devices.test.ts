@@ -24,6 +24,7 @@ const power = {
   actions: [],
   numeric: true,
   available: true,
+  state: "800",
 };
 
 const alert = {
@@ -51,6 +52,9 @@ describe.skipIf(!postgresUp)("phase 6 devices", () => {
       const names = listed.json().devices.map((item: { name: string }) => item.name);
       expect(names).toContain("Test Alert");
       expect(names).toContain("Test Power");
+      expect(
+        listed.json().devices.find((item: { name: string }) => item.name === "Test Power").state,
+      ).toBe("800");
       expect(JSON.stringify(listed.json())).not.toContain("input_number");
       expect(JSON.stringify(listed.json())).not.toContain("entityId");
 

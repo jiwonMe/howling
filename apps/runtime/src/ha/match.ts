@@ -41,6 +41,38 @@ export const matchHaNumericTrigger = (input: {
   return { [input.inputKey]: value };
 };
 
+export const matchDeviceTrigger = (input: {
+  readonly entityId: string;
+  readonly wanted: string;
+  readonly previous?: string;
+  readonly next: string;
+  readonly syncing: boolean;
+  readonly inputKey: string;
+}): Record<string, number> | undefined => {
+  const numeric = matchHaNumericTrigger(input);
+  if (numeric) {
+    return numeric;
+  }
+  if (input.syncing || input.entityId !== input.wanted) {
+    return undefined;
+  }
+  if (!isStateValueChange(input.previous, input.next) || isRecoveryFromUnknown(input.previous)) {
+    return undefined;
+  }
+  const bit = binaryBit(input.next);
+  return bit === undefined ? undefined : { [input.inputKey]: bit };
+};
+
+const binaryBit = (value: string): number | undefined => {
+  if (value === "on" || value === "open" || value === "unlocked" || value === "detected") {
+    return 1;
+  }
+  if (value === "off" || value === "closed" || value === "locked" || value === "clear") {
+    return 0;
+  }
+  return undefined;
+};
+
 export const matchPowerTrigger = (input: {
   readonly entityId: string;
   readonly wanted: string;

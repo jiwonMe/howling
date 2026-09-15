@@ -143,8 +143,14 @@ export {
   syncStreamSchema,
 } from "./runtime/streams.js";
 export {
+  DEVICE_ACTION_LABELS,
+  DEVICE_KIND_LABELS,
+  actionLabel,
   creatableDeviceKindSchema,
+  deviceActionBodySchema,
+  deviceActionInvokeSchema,
   deviceActionRequestSchema,
+  deviceActionResultSchema,
   deviceActionSchema,
   deviceCreateBodySchema,
   deviceCreateRequestSchema,
@@ -153,11 +159,29 @@ export {
   deviceSummarySchema,
   deviceTriggerConfigSchema,
   devicesSnapshotSchema,
+  helperDeviceKindSchema,
+  isHelperCreate,
 } from "./devices.js";
+export { actionsOf, fieldsOf } from "./device-services.js";
+export type { DeviceActionField, DeviceService } from "./device-services.js";
+export {
+  DEVICE_STATE_LABELS,
+  looksLikeEntityId,
+  onDeviceBoard,
+  publicAttrsOf,
+  readingOf,
+  stateLabel,
+} from "./device-state.js";
+export { productIdOf, productNameOf, productPartsOf } from "./device-products.js";
+export type { ProductPart } from "./device-products.js";
+export { parseVirtualDevicesYaml } from "./device-yaml.js";
 export type {
   CreatableDeviceKind,
   DeviceAction,
+  DeviceActionBody,
+  DeviceActionInvoke,
   DeviceActionRequest,
+  DeviceActionResult,
   DeviceCreateBody,
   DeviceCreateRequest,
   DeviceCreateResult,
@@ -165,6 +189,7 @@ export type {
   DeviceSummary,
   DeviceTriggerConfig,
   DevicesSnapshot,
+  HelperDeviceKind,
 } from "./devices.js";
 export {
   DEVICE_INTEGRATIONS,

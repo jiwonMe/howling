@@ -30,6 +30,18 @@ export const formStack = style({
   maxWidth: "28rem",
 });
 
+export const textarea = style({
+  borderRadius: vars.radius.md,
+  border: `1px solid ${vars.color.borderStrong}`,
+  backgroundColor: vars.color.bg,
+  color: vars.color.text,
+  padding: `${vars.space.sm} ${vars.space.md}`,
+  minHeight: "12rem",
+  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontSize: vars.font.sm,
+  resize: "vertical",
+});
+
 export const select = style({
   borderRadius: vars.radius.md,
   border: `1px solid ${vars.color.borderStrong}`,

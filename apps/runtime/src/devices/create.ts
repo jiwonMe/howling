@@ -1,17 +1,19 @@
 /**
  * Howling 이름·종류로 HA helper를 만든다. entity_id는 여기만 본다.
  */
-import type {
-  CreatableDeviceKind,
-  DeviceCreateRequest,
-  DeviceCreateResult,
-  DeviceSummary,
+import {
+  isHelperCreate,
+  type DeviceCreateRequest,
+  type DeviceCreateResult,
+  type DeviceSummary,
+  type HelperDeviceKind,
 } from "@howling/contracts";
+import { createVirtualDevices } from "./virtual-create.js";
 import type Database from "better-sqlite3";
 import type { HaHandle } from "../ha/client.js";
 import { listDevices, summariesOf, upsertDevices, type EntityHint } from "./store.js";
 
-const DOMAIN_OF: Readonly<Record<CreatableDeviceKind, string>> = {
+const DOMAIN_OF: Readonly<Record<HelperDeviceKind, string>> = {
   number: "input_number",
   boolean: "input_boolean",
 };
@@ -75,6 +77,9 @@ export const hintForCreated = (
 
 export const publicCreateError = (error: unknown): string => {
   const raw = error instanceof Error ? error.message : "";
+  if (raw === "알 수 없는 제품입니다." || raw === "종류 또는 제품이 필요합니다.") {
+    return raw;
+  }
   if (/already exists|already_exists|duplicate/i.test(raw)) {
     return "같은 이름의 기기가 이미 있습니다.";
   }
@@ -89,7 +94,7 @@ export const createHaDevice = async (input: {
   readonly db: Database.Database;
   readonly runtimeId: string;
   readonly name: string;
-  readonly kind: CreatableDeviceKind;
+  readonly kind: HelperDeviceKind;
   readonly min?: number;
   readonly max?: number;
   readonly step?: number;
@@ -144,6 +149,14 @@ export const handleDevicesCreate = async (
   },
   payload: DeviceCreateRequest,
 ): Promise<DeviceCreateResult> => {
+  if (!isHelperCreate(payload)) {
+    try {
+      const devices = createVirtualDevices(input.db, input.runtimeId, payload);
+      return { requestId: payload.requestId, device: devices[0], devices };
+    } catch (error) {
+      return { requestId: payload.requestId, error: publicCreateError(error) };
+    }
+  }
   if (!input.ha || input.ha.status() !== "ready") {
     return { requestId: payload.requestId, error: "허브가 아직 준비되지 않았습니다." };
   }
@@ -153,12 +166,12 @@ export const handleDevicesCreate = async (
       db: input.db,
       runtimeId: input.runtimeId,
       name: payload.name,
-      kind: payload.kind,
+      kind: payload.kind === "number" ? "number" : "boolean",
       ...(payload.min !== undefined ? { min: payload.min } : {}),
       ...(payload.max !== undefined ? { max: payload.max } : {}),
       ...(payload.step !== undefined ? { step: payload.step } : {}),
     });
-    return { requestId: payload.requestId, device };
+    return { requestId: payload.requestId, device, devices: [device] };
   } catch (error) {
     return { requestId: payload.requestId, error: publicCreateError(error) };
   }
@@ -170,7 +183,7 @@ const reuseExisting = async (
     readonly db: Database.Database;
     readonly runtimeId: string;
     readonly name: string;
-    readonly kind: CreatableDeviceKind;
+    readonly kind: HelperDeviceKind;
   },
   domain: string,
 ): Promise<DeviceSummary | undefined> => {

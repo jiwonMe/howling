@@ -255,15 +255,21 @@ describe("phase 6 device integrate", () => {
       { requestId: "req_done", integration: "apple_tv" },
     );
     expect(done.status).toBe("done");
-    expect(done.devices).toEqual([
-      expect.objectContaining({
-        name: "거실 Apple TV",
-        kind: "player",
-        actions: ["turn_on", "turn_off"],
-      }),
-    ]);
+    expect(done.devices).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "거실 Apple TV",
+          kind: "player",
+        }),
+        expect.objectContaining({
+          name: "리모컨",
+          kind: "remote",
+        }),
+      ]),
+    );
+    expect(done.devices?.find((item) => item.kind === "player")?.actions).toContain("play_media");
     expect(JSON.stringify(done)).not.toContain("media_player.");
-    expect(JSON.stringify(done)).not.toContain("toggle");
+    expect(JSON.stringify(done)).not.toContain("entity_id");
     db.close();
   });
 });

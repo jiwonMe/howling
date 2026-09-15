@@ -6,6 +6,7 @@ import {
   desiredDataSchema,
   desiredDeploymentSchema,
   detailRequestSchema,
+  deviceActionInvokeSchema,
   deviceCreateRequestSchema,
   deviceIntegrateRequestSchema,
   effectFixtureSchema,
@@ -13,6 +14,8 @@ import {
   runCommandPayloadSchema,
   runStartPayloadSchema,
   summaryAckSchema,
+  type DeviceActionInvoke,
+  type DeviceActionResult,
   type DeviceCreateRequest,
   type DeviceCreateResult,
   type DeviceIntegrateRequest,
@@ -39,6 +42,7 @@ export type CloudControlExtras = {
   readonly onOauthCode?: (state: string, code: string) => void;
   readonly onDevicesCreate?: (payload: DeviceCreateRequest) => Promise<DeviceCreateResult>;
   readonly onDevicesIntegrate?: (payload: DeviceIntegrateRequest) => Promise<DeviceIntegrateResult>;
+  readonly onDevicesAction?: (payload: DeviceActionInvoke) => Promise<DeviceActionResult>;
 };
 
 export const handleCloudControl = (
@@ -74,6 +78,23 @@ const dispatchCloudControl = (
           requestId: payload.requestId,
           status: "error",
           error: "기기를 연결하지 못했습니다.",
+        });
+      });
+    return;
+  }
+  if (envelope.type === "devices.action") {
+    const payload = deviceActionInvokeSchema.parse(envelope.payload);
+    void Promise.resolve(extras?.onDevicesAction?.(payload))
+      .then((result) => {
+        gateway.send(
+          "devices.acted",
+          result ?? { requestId: payload.requestId, error: "runtime cannot act" },
+        );
+      })
+      .catch(() => {
+        gateway.send("devices.acted", {
+          requestId: payload.requestId,
+          error: "기기를 바꾸지 못했습니다.",
         });
       });
     return;

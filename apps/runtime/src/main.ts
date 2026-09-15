@@ -19,6 +19,7 @@ import { retainLocal } from "./data/retain.js";
 import { flushUnackedObserve, tickObserver } from "./observe/tick.js";
 import { resolveHaEndpoint } from "./ha/supervisor.js";
 import { createDeviceAwareAdapter } from "./devices/adapter.js";
+import { handleDevicesAction } from "./devices/act.js";
 import { handleDevicesCreate } from "./devices/create.js";
 import { handleDevicesIntegrate } from "./devices/integrate.js";
 import { reportDevices } from "./devices/report.js";
@@ -53,6 +54,7 @@ upsertIdentity(db, { ...config, runtimeId: session.runtimeId, siteId: session.si
 const haLog = createHaCallLog();
 let ha: HaHandle | undefined;
 const mcpRegistry = createMcpRegistry(db, config.secretRoot);
+let host: ReturnType<typeof createRuntimeHost>;
 const adapter = createMcpAwareAdapter({
   next: createDeviceAwareAdapter({
     next: createHaAwareAdapter({
@@ -61,12 +63,17 @@ const adapter = createMcpAwareAdapter({
       testHooks: config.testHooks,
     }),
     db,
+    onVirtualEvent: (event) => {
+      dispatchDeviceTriggers(host, event, false);
+      reportDevices(gateway, db);
+    },
   }),
   registry: () => mcpRegistry,
 });
-const host = createRuntimeHost({ db, adapter });
+host = createRuntimeHost({ db, adapter });
 
-const gateway = startRuntimeGateway(
+let gateway: ReturnType<typeof startRuntimeGateway>;
+gateway = startRuntimeGateway(
   { ...config, runtimeId: session.runtimeId, siteId: session.siteId },
   session.token,
   undefined,
@@ -75,12 +82,28 @@ const gateway = startRuntimeGateway(
       onOauthCode: (state, code) => {
         void acceptOauthCode(state, code);
       },
+      onDevicesAction: async (payload) => {
+        const result = await handleDevicesAction(
+          {
+            db,
+            onEvent: (event) => {
+              dispatchDeviceTriggers(host, event, false);
+            },
+            ...(ha ? { ha } : {}),
+          },
+          payload,
+        );
+        if (result.device) {
+          reportDevices(gateway, db);
+        }
+        return result;
+      },
       onDevicesCreate: async (payload) => {
         const result = await handleDevicesCreate(
           { db, runtimeId: session.runtimeId, ...(ha ? { ha } : {}) },
           payload,
         );
-        if (result.device) {
+        if (result.device || (result.devices && result.devices.length > 0)) {
           reportDevices(gateway, db);
         }
         return result;

@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { deviceTriggerConfigSchema, type TriggerBinding } from "@howling/contracts";
 import type { RuntimeHost } from "../coordinator/host.js";
 import type { HaEvent } from "../ha/client.js";
-import { matchHaNumericTrigger } from "../ha/match.js";
+import { matchDeviceTrigger } from "../ha/match.js";
 import { listActiveArtifacts } from "../store/artifacts.js";
 import { getDevice } from "./store.js";
 
@@ -30,7 +30,7 @@ export const dispatchDeviceTriggers = (
       if (!device) {
         continue;
       }
-      const matched = matchHaNumericTrigger({
+      const matched = matchDeviceTrigger({
         entityId: event.entityId,
         wanted: device.entityId,
         next: event.state,

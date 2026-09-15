@@ -1,7 +1,7 @@
 /**
  * 허브가 올린 기기. entity_id는 보여주지 않는다.
  */
-import type { DeviceSummary } from "@howling/contracts";
+import { actionLabel, DEVICE_KIND_LABELS, stateLabel, type DeviceSummary } from "@howling/contracts";
 import { useEffect, useState } from "react";
 import { loginHref, UnauthorizedError } from "../lib/api.js";
 import { haStatus } from "../lib/dashboard.js";
@@ -72,7 +72,7 @@ export const DevicesPage = () => {
       <header className={header}>
         <div>
           <h1 className={title}>기기</h1>
-          <p className={subtitle}>이름과 동작만 보입니다. 허브에 있는 기기도 여기 나타납니다.</p>
+          <p className={subtitle}>지금 상태와 동작을 봅니다. 허브 화면을 열지 않아도 됩니다.</p>
         </div>
       </header>
       <DeviceConnectForm
@@ -97,10 +97,13 @@ export const DevicesPage = () => {
                   종류
                 </th>
                 <th className={tableHead} scope="col">
+                  현재
+                </th>
+                <th className={tableHead} scope="col">
                   동작
                 </th>
                 <th className={tableHead} scope="col">
-                  상태
+                  연결
                 </th>
               </tr>
             </thead>
@@ -108,8 +111,14 @@ export const DevicesPage = () => {
               {devices.map((item) => (
                 <tr key={item.id}>
                   <td className={tableCell}>{item.name}</td>
-                  <td className={tableCell}>{kindLabel(item.kind)}</td>
-                  <td className={tableCell}>{item.actions.join(", ") || "—"}</td>
+                  <td className={tableCell}>{DEVICE_KIND_LABELS[item.kind]}</td>
+                  <td className={tableCell}>
+                    {item.available ? stateLabel(item.state) : "불가"}
+                    {item.available && item.reading ? ` · ${item.reading}` : ""}
+                  </td>
+                  <td className={tableCell}>
+                    {item.actions.map((action) => actionLabel(action)).join(", ") || "—"}
+                  </td>
                   <td className={tableCell}>{item.available ? "사용 가능" : "불가"}</td>
                 </tr>
               ))}
@@ -117,21 +126,10 @@ export const DevicesPage = () => {
           </table>
         </div>
       )}
-      <p className={caption}>클라우드에는 이름과 종류만 있습니다. 집 기기는 위에서 연결합니다.</p>
+      <p className={caption}>클라우드에는 이름·종류·현재값만 있습니다. entity id는 없습니다.</p>
     </div>
   );
 };
-
-const KIND_LABEL: Readonly<Record<DeviceSummary["kind"], string>> = {
-  number: "숫자",
-  light: "조명",
-  switch: "스위치",
-  boolean: "스위치",
-  fan: "팬",
-  player: "플레이어",
-};
-
-const kindLabel = (kind: DeviceSummary["kind"]): string => KIND_LABEL[kind];
 
 const mergeDevice = (current: readonly DeviceSummary[], device: DeviceSummary): DeviceSummary[] => {
   const next = current.filter((item) => item.id !== device.id);

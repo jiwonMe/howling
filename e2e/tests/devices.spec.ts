@@ -19,6 +19,20 @@ test("lists hub devices without entity ids", async ({ page, request }) => {
   await expect(page.getByTestId("runtime-online")).toHaveText("online", { timeout: 60_000 });
   await expect(page.getByTestId("ha-status")).toHaveText("ready", { timeout: 60_000 });
 
+  await page.getByRole("link", { name: "상태" }).click();
+  await expect(page.getByTestId("device-dashboard")).toContainText("Test Power", { timeout: 60_000 });
+  await expect(page.getByTestId("device-dashboard")).toContainText("Test Alert");
+  const home = await page.locator("body").innerText();
+  expect(home).not.toContain("input_number.");
+  expect(home).not.toContain("input_boolean.");
+  await page.getByTestId("device-dashboard").getByRole("button", { name: /Test Alert/ }).click();
+  await expect(page.getByTestId("device-dialog")).toBeVisible();
+  await page.getByTestId("device-act-turn_off").click();
+  await expect(page.getByTestId("device-dialog")).toContainText("꺼짐", { timeout: 20_000 });
+  const dialog = await page.getByTestId("device-dialog").innerText();
+  expect(dialog).not.toContain("input_boolean.");
+  await page.getByTestId("device-dialog-close").click();
+
   await page.getByRole("link", { name: "기기" }).click();
   await expect(page).toHaveURL(/\/devices/);
   await expect(page.getByText("Test Power")).toBeVisible({ timeout: 60_000 });
@@ -46,6 +60,27 @@ test("lists hub devices without entity ids", async ({ page, request }) => {
   await page.getByTestId("device-kind").selectOption("boolean");
   await page.getByTestId("device-add").click();
   await expect(page.getByTestId("device-list")).toContainText("E2E Extra Switch", { timeout: 60_000 });
-  const after = await page.locator("body").innerText();
-  expect(after).not.toContain("input_boolean.");
+  const afterForm = await page.locator("body").innerText();
+  expect(afterForm).not.toContain("input_boolean.");
+
+  await page.getByTestId("device-connect-virtual").click();
+  await page.getByTestId("device-create-yaml-open").click();
+  await page.getByTestId("device-yaml").fill("- name: E2E Yaml Switch\n  kind: boolean\n");
+  await page.getByTestId("device-add-yaml").click();
+  await expect(page.getByTestId("device-list")).toContainText("E2E Yaml Switch", { timeout: 60_000 });
+  const afterYaml = await page.locator("body").innerText();
+  expect(afterYaml).not.toContain("input_boolean.");
+  expect(afterYaml).not.toContain("input_number.");
+
+  await page.getByTestId("device-connect-virtual").click();
+  await page.getByTestId("device-create-yaml-open").click();
+  await page.getByTestId("device-yaml").fill("- name: E2E Living TV\n  product: Apple TV\n");
+  await page.getByTestId("device-add-yaml").click();
+  await expect(page.getByTestId("device-list")).toContainText("E2E Living TV", { timeout: 60_000 });
+  await expect(page.getByTestId("device-list")).toContainText("E2E Living TV 리모컨");
+  await expect(page.getByTestId("device-list")).toContainText("E2E Living TV 키보드");
+  const afterProduct = await page.locator("body").innerText();
+  expect(afterProduct).not.toContain("input_boolean.");
+  expect(afterProduct).not.toContain("media_player.");
+  expect(afterProduct).not.toContain("remote.");
 });

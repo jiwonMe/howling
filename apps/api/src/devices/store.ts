@@ -34,14 +34,16 @@ export const upsertSiteDevice = async (
 ): Promise<void> => {
   await pool.query(
     `INSERT INTO site_devices
-       (site_id, id, name, kind, actions_json, numeric, available, updated_at)
-     VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, now())
+       (site_id, id, name, kind, actions_json, numeric, available, state, reading, updated_at)
+     VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, now())
      ON CONFLICT (site_id, id) DO UPDATE SET
        name = EXCLUDED.name,
        kind = EXCLUDED.kind,
        actions_json = EXCLUDED.actions_json,
        numeric = EXCLUDED.numeric,
        available = EXCLUDED.available,
+       state = EXCLUDED.state,
+       reading = EXCLUDED.reading,
        updated_at = now()`,
     [
       siteId,
@@ -51,6 +53,8 @@ export const upsertSiteDevice = async (
       JSON.stringify(item.actions),
       item.numeric,
       item.available,
+      item.state ?? null,
+      item.reading ?? null,
     ],
   );
 };
@@ -66,8 +70,10 @@ export const listSiteDevices = async (
     actions_json: unknown;
     numeric: boolean;
     available: boolean;
+    state: string | null;
+    reading: string | null;
   }>(
-    `SELECT id, name, kind, actions_json, numeric, available
+    `SELECT id, name, kind, actions_json, numeric, available, state, reading
      FROM site_devices WHERE site_id = $1 ORDER BY name`,
     [siteId],
   );
@@ -78,5 +84,7 @@ export const listSiteDevices = async (
     actions: Array.isArray(row.actions_json) ? (row.actions_json as DeviceSummary["actions"]) : [],
     numeric: row.numeric,
     available: row.available,
+    ...(row.state ? { state: row.state } : {}),
+    ...(row.reading ? { reading: row.reading } : {}),
   }));
 };

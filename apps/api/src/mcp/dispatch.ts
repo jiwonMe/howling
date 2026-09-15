@@ -59,7 +59,7 @@ const invoke = async (
       return {
         ok: false,
         status: 400,
-        body: { error: { code: "invalid_request", message: "name and kind required" } },
+        body: { error: { code: "invalid_request", message: "name and kind or product required" } },
       };
     }
     return createDeviceFor(pool, actor, parsed.data);

@@ -4,6 +4,7 @@
 import {
   activationResultSchema,
   connectionsSnapshotSchema,
+  deviceActionResultSchema,
   deviceCreateResultSchema,
   deviceIntegrateResultSchema,
   devicesSnapshotSchema,
@@ -17,6 +18,7 @@ import type pg from "pg";
 import { acceptDetailResponse } from "../data/detail.js";
 import { insertObserveSamples } from "../data/store.js";
 import { appendStreamRow } from "../data/streams.js";
+import { acceptDeviceActed } from "../devices/act.js";
 import { acceptDeviceCreated } from "../devices/create.js";
 import { acceptDeviceIntegrated } from "../devices/integrate.js";
 import { replaceSiteDevices, upsertSiteDevice } from "../devices/store.js";
@@ -147,6 +149,17 @@ const dispatchRuntimeControl = async (
       await upsertSiteDevice(pool, envelope.siteId, device);
     }
     acceptDeviceIntegrated(parsed.data);
+    return;
+  }
+  if (envelope.type === "devices.acted") {
+    const parsed = deviceActionResultSchema.safeParse(envelope.payload);
+    if (!parsed.success) {
+      return;
+    }
+    if (parsed.data.device) {
+      await upsertSiteDevice(pool, envelope.siteId, parsed.data.device);
+    }
+    acceptDeviceActed(parsed.data);
     return;
   }
   if (envelope.type === "devices.created") {
