@@ -23,6 +23,12 @@ test("lists hub devices without entity ids", async ({ page, request }) => {
   await expect(page).toHaveURL(/\/devices/);
   await expect(page.getByText("Test Power")).toBeVisible({ timeout: 60_000 });
   await expect(page.getByText("Test Alert")).toBeVisible();
+  await expect(page.getByTestId("device-connect")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "기기 연결" })).toBeVisible();
+  await expect(page.getByTestId("device-connect-catalog")).toBeVisible();
+  await expect(page.getByTestId("device-connect-virtual")).toBeVisible();
+  await expect(page.getByTestId("device-connect-apple_tv")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "기기 추가" })).toHaveCount(0);
   const body = await page.locator("body").innerText();
   expect(body).not.toContain("input_number.");
   expect(body).not.toContain("input_boolean.");
@@ -34,4 +40,12 @@ test("lists hub devices without entity ids", async ({ page, request }) => {
   expect(payload).not.toContain("input_number.");
   expect(payload).not.toContain("input_boolean.");
   expect(payload).not.toContain("entityId");
+
+  await page.getByTestId("device-connect-virtual").click();
+  await page.getByTestId("device-name").fill("E2E Extra Switch");
+  await page.getByTestId("device-kind").selectOption("boolean");
+  await page.getByTestId("device-add").click();
+  await expect(page.getByTestId("device-list")).toContainText("E2E Extra Switch", { timeout: 60_000 });
+  const after = await page.locator("body").innerText();
+  expect(after).not.toContain("input_boolean.");
 });

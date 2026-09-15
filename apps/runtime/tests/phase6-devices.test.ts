@@ -31,6 +31,11 @@ describe("phase 6 device catalog", () => {
   it("classifies domains and hides the entity id in the name", () => {
     expect(classifyEntity("input_number.test_power", "800")?.kind).toBe("number");
     expect(classifyEntity("input_boolean.test_alert", "off")?.actions).toContain("turn_on");
+    expect(classifyEntity("media_player.living", "idle")).toEqual({
+      kind: "player",
+      actions: ["turn_on", "turn_off"],
+      numeric: false,
+    });
     expect(classifyEntity("sun.sun", "above_horizon")).toBeUndefined();
     expect(displayNameOf("input_number.test_power", "Test Power")).toBe("Test Power");
     expect(displayNameOf("input_number.test_power")).toBe("test power");

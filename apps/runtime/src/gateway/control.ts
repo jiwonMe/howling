@@ -6,11 +6,17 @@ import {
   desiredDataSchema,
   desiredDeploymentSchema,
   detailRequestSchema,
+  deviceCreateRequestSchema,
+  deviceIntegrateRequestSchema,
   effectFixtureSchema,
   oauthCodePayloadSchema,
   runCommandPayloadSchema,
   runStartPayloadSchema,
   summaryAckSchema,
+  type DeviceCreateRequest,
+  type DeviceCreateResult,
+  type DeviceIntegrateRequest,
+  type DeviceIntegrateResult,
   type RevisionArtifact,
   type RuntimeEnvelope,
 } from "@howling/contracts";
@@ -29,11 +35,17 @@ import type { GatewayHandle } from "./client.js";
 
 const engine = createEngine({ registry: createOfficialRegistry() });
 
+export type CloudControlExtras = {
+  readonly onOauthCode?: (state: string, code: string) => void;
+  readonly onDevicesCreate?: (payload: DeviceCreateRequest) => Promise<DeviceCreateResult>;
+  readonly onDevicesIntegrate?: (payload: DeviceIntegrateRequest) => Promise<DeviceIntegrateResult>;
+};
+
 export const handleCloudControl = (
   host: RuntimeHost,
   gateway: GatewayHandle,
   envelope: RuntimeEnvelope,
-  extras?: { readonly onOauthCode?: (state: string, code: string) => void },
+  extras?: CloudControlExtras,
 ): void => {
   try {
     dispatchCloudControl(host, gateway, envelope, extras);
@@ -46,8 +58,43 @@ const dispatchCloudControl = (
   host: RuntimeHost,
   gateway: GatewayHandle,
   envelope: RuntimeEnvelope,
-  extras?: { readonly onOauthCode?: (state: string, code: string) => void },
+  extras?: CloudControlExtras,
 ): void => {
+  if (envelope.type === "devices.integrate") {
+    const payload = deviceIntegrateRequestSchema.parse(envelope.payload);
+    void Promise.resolve(extras?.onDevicesIntegrate?.(payload))
+      .then((result) => {
+        gateway.send(
+          "devices.integrated",
+          result ?? { requestId: payload.requestId, status: "error", error: "runtime cannot integrate" },
+        );
+      })
+      .catch(() => {
+        gateway.send("devices.integrated", {
+          requestId: payload.requestId,
+          status: "error",
+          error: "기기를 연결하지 못했습니다.",
+        });
+      });
+    return;
+  }
+  if (envelope.type === "devices.create") {
+    const payload = deviceCreateRequestSchema.parse(envelope.payload);
+    void Promise.resolve(extras?.onDevicesCreate?.(payload))
+      .then((result) => {
+        gateway.send(
+          "devices.created",
+          result ?? { requestId: payload.requestId, error: "runtime cannot create devices" },
+        );
+      })
+      .catch(() => {
+        gateway.send("devices.created", {
+          requestId: payload.requestId,
+          error: "기기를 만들지 못했습니다.",
+        });
+      });
+    return;
+  }
   if (envelope.type === "oauth.code") {
     const payload = oauthCodePayloadSchema.parse(envelope.payload);
     extras?.onOauthCode?.(payload.state, payload.code);

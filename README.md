@@ -7,7 +7,7 @@ Home Assistant를 노드로 자동화하는 제품입니다. 브라우저에서 
 ## 지금 되는 것
 
 - 로그인, pairing, 허브 WebSocket 준비 상태
-- 기기 목록. 초안·cloud에는 `deviceId`만, `entity_id`는 runtime에만
+- 기기 목록과 `/devices`에서 집 기기(Hue, Shelly, Apple TV 등) 연결과 가상 기기. 플레이어는 켜기/끄기. 초안·cloud에는 `deviceId`만, `entity_id`는 runtime에만
 - React Flow 편집기에서 초안 저장·검증·revision·배포
 - `device.changed` trigger → `@howling/core` 실행 → `device.action` → 로컬 HA 서비스
 - 실행 상세 5초 polling
@@ -45,7 +45,7 @@ pnpm test:e2e
 | --- | --- |
 | `/` | API·runtime·허브 상태 |
 | `/connections` | pairing, 허브·MCP, 원본 전송·보관, OAuth 제공자, scoped token |
-| `/devices` | 허브 기기 이름·종류·동작 |
+| `/devices` | 허브 기기, 집 기기 연결, 가상 기기 |
 | `/flows` | 초안·배포 목록 |
 | `/flows/:flowId` | 편집기 |
 | `/runs/:runId` | 실행 상세 |

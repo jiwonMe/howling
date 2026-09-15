@@ -4,6 +4,8 @@
 import {
   activationResultSchema,
   connectionsSnapshotSchema,
+  deviceCreateResultSchema,
+  deviceIntegrateResultSchema,
   devicesSnapshotSchema,
   observeBatchSchema,
   rawBatchSchema,
@@ -15,7 +17,9 @@ import type pg from "pg";
 import { acceptDetailResponse } from "../data/detail.js";
 import { insertObserveSamples } from "../data/store.js";
 import { appendStreamRow } from "../data/streams.js";
-import { replaceSiteDevices } from "../devices/store.js";
+import { acceptDeviceCreated } from "../devices/create.js";
+import { acceptDeviceIntegrated } from "../devices/integrate.js";
+import { replaceSiteDevices, upsertSiteDevice } from "../devices/store.js";
 import { setDeploymentStatus } from "../flows/store.js";
 import { appendSummaryBatch } from "../flows/journal.js";
 import { upsertRunSummary } from "../flows/runs.js";
@@ -132,6 +136,28 @@ const dispatchRuntimeControl = async (
       trigger: payload.trigger ?? null,
       events: payload.events,
     });
+    return;
+  }
+  if (envelope.type === "devices.integrated") {
+    const parsed = deviceIntegrateResultSchema.safeParse(envelope.payload);
+    if (!parsed.success) {
+      return;
+    }
+    for (const device of parsed.data.devices ?? []) {
+      await upsertSiteDevice(pool, envelope.siteId, device);
+    }
+    acceptDeviceIntegrated(parsed.data);
+    return;
+  }
+  if (envelope.type === "devices.created") {
+    const parsed = deviceCreateResultSchema.safeParse(envelope.payload);
+    if (!parsed.success) {
+      return;
+    }
+    if (parsed.data.device) {
+      await upsertSiteDevice(pool, envelope.siteId, parsed.data.device);
+    }
+    acceptDeviceCreated(parsed.data);
     return;
   }
   if (envelope.type === "devices.snapshot") {

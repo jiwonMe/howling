@@ -120,8 +120,8 @@ WSS 이름(예약 그대로):
 
 | 방향 | type |
 | --- | --- |
-| API → runtime | `desired.deployment`, `run.start`, `run.step`, `summary.ack` |
-| runtime → API | `hello`, `heartbeat`, `activation.result`, `summary.batch`, `run.summary`, `connections.snapshot`, `devices.snapshot` |
+| API → runtime | `desired.deployment`, `run.start`, `run.step`, `summary.ack`, `devices.create`, `devices.integrate` |
+| runtime → API | `hello`, `heartbeat`, `activation.result`, `summary.batch`, `run.summary`, `connections.snapshot`, `devices.snapshot`, `devices.created`, `devices.integrated` |
 
 Runtime은 digest·노드 버전·HA connection binding을 검사한 뒤 `revision_artifacts`를 upsert합니다. 활성 포인터는 한 SQLite 트랜잭션입니다. 실패하면 이전 활성 revision을 유지합니다.
 

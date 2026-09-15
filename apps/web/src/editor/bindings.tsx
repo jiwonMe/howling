@@ -57,7 +57,8 @@ const TriggerFields = (props: {
   const deviceId =
     props.trigger?.kind === "device.changed" ? String(props.trigger.config.deviceId ?? "") : "";
   const numeric = props.devices.filter(
-    (item) => item.numeric && (item.available || item.id === deviceId),
+    (item) =>
+      item.kind === "number" && item.numeric && (item.available || item.id === deviceId),
   );
   return (
     <>

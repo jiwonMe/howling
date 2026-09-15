@@ -11,6 +11,7 @@ export type ClassifiedDevice = {
 };
 
 const SWITCH_ACTIONS: readonly DeviceAction[] = ["turn_on", "turn_off", "toggle"];
+const PLAYER_ACTIONS: readonly DeviceAction[] = ["turn_on", "turn_off"];
 
 const KIND_BY_DOMAIN: Readonly<Record<string, DeviceKind>> = {
   sensor: "number",
@@ -20,6 +21,7 @@ const KIND_BY_DOMAIN: Readonly<Record<string, DeviceKind>> = {
   switch: "switch",
   input_boolean: "boolean",
   fan: "fan",
+  media_player: "player",
 };
 
 export const domainOf = (entityId: string): string => entityId.split(".")[0] ?? "";
@@ -33,6 +35,9 @@ export const classifyEntity = (entityId: string, state: string): ClassifiedDevic
   if (kind === "number") {
     return { kind, actions: [], numeric };
   }
+  if (kind === "player") {
+    return { kind, actions: PLAYER_ACTIONS, numeric };
+  }
   return { kind, actions: SWITCH_ACTIONS, numeric };
 };
 
@@ -45,4 +50,4 @@ export const displayNameOf = (entityId: string, friendlyName?: string): string =
 };
 
 export const actionsOf = (kind: DeviceKind): readonly DeviceAction[] =>
-  kind === "number" ? [] : SWITCH_ACTIONS;
+  kind === "number" ? [] : kind === "player" ? PLAYER_ACTIONS : SWITCH_ACTIONS;

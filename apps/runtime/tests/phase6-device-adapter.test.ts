@@ -35,6 +35,12 @@ describe("phase 6 device adapter", () => {
         calls.push({ domain, service, data });
         return { ok: true };
       },
+      request: async () => {
+        throw new Error("not used");
+      },
+      rest: async () => {
+        throw new Error("not used");
+      },
       stop: () => undefined,
     };
     const adapter = createDeviceAwareAdapter({
@@ -54,6 +60,48 @@ describe("phase 6 device adapter", () => {
       service: "turn_on",
       data: { entity_id: "input_boolean.test_alert" },
     });
+    db.close();
+  });
+
+  it("turns a player on through media_player and rejects toggle", async () => {
+    const { db } = openTestDb();
+    const deviceId = deviceIdOf("runtime_dev", "media_player.living");
+    upsertDevices(db, "runtime_dev", [
+      { entityId: "media_player.living", state: "idle", friendlyName: "거실 TV" },
+    ]);
+    const calls: { domain: string; service: string; data: Record<string, unknown> }[] = [];
+    const ha: HaHandle = {
+      status: () => "ready",
+      lastSyncAt: () => null,
+      callService: async (domain, service, data) => {
+        calls.push({ domain, service, data });
+        return { ok: true };
+      },
+      request: async () => {
+        throw new Error("not used");
+      },
+      rest: async () => {
+        throw new Error("not used");
+      },
+      stop: () => undefined,
+    };
+    const adapter = createDeviceAwareAdapter({
+      db,
+      next: createHaAwareAdapter({
+        fake: createFakeAdapter(),
+        ha: () => ha,
+        testHooks: true,
+      }),
+    });
+    const on = await adapter.execute(requestOf({ deviceId, action: "turn_on" }));
+    expect(on).toMatchObject({ status: "succeeded" });
+    expect(calls[0]).toEqual({
+      domain: "media_player",
+      service: "turn_on",
+      data: { entity_id: "media_player.living" },
+    });
+    const toggle = await adapter.execute(requestOf({ deviceId, action: "toggle" }));
+    expect(toggle).toMatchObject({ status: "unknown", reason: "device missing" });
     db.close();
   });
 

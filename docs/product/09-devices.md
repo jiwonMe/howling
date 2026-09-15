@@ -10,14 +10,16 @@
 | 편집기 Trigger | 숫자 기기 select. 저장 `{ kind: "device.changed", config: { deviceId, inputKey } }` |
 | 편집기 Effect | adapter `device` / `action`. 저장 `inputs.request = { deviceId, action }` |
 
-빈 목록: "허브가 연결되면 기기가 나타납니다."
+빈 목록: "아직 기기가 없습니다. 위에서 연결하거나 허브 기기를 기다립니다."
+
+`/devices` **기기 연결**에서 Philips Hue, Shelly, IKEA 등 집 기기를 고릅니다. 맨 위 **가상 기기**는 플로 시험용 스위치·숫자입니다. 집 기기가 아닙니다. 사용자는 Home Assistant 통합 이름을 보지 않습니다. runtime이 허브 config flow 또는 helper 생성을 대행하고, 새 기기가 목록과 편집기 Effect에 나타납니다. 이미 허브에 있는 조명·팬·플레이어도 자동으로 나타납니다. Apple TV는 같은 네트워크에서 찾고, 못 찾을 때만 이름·주소를 묻습니다. 연결은 화면 숫자입니다.
 
 고급 경로는 그대로 있습니다. Trigger 「고급: HA entity」는 `ha.state_changed`. Effect 「고급 (HA 서비스)」는 `homeassistant` / `call_service`.
 
 ## 첫 슬라이스
 
 - 트리거: `sensor` · `input_number` · `number` 중 **현재 상태가 숫자**인 기기
-- 동작: `light` · `switch` · `input_boolean` · `fan`의 `turn_on` / `turn_off` / `toggle`
+- 동작: `light` · `switch` · `input_boolean` · `fan`의 `turn_on` / `turn_off` / `toggle`. `media_player`는 종류 `player`, 동작은 `turn_on` / `turn_off`만
 - 표시 이름: HA `friendly_name`. area·registry 그룹핑 없음
 
 ## id
@@ -41,7 +43,14 @@ HA get_states / state_changed
 ## API · MCP
 
 - `GET /api/v1/sites/:siteId/devices`
-- MCP `list_devices` (`read`). 응답은 summary만
+- `POST /api/v1/sites/:siteId/devices` `{ name, kind: "number" | "boolean" }`
+- `POST /api/v1/sites/:siteId/devices/integrations` `{ integration?, token?, values?, list? }`
+- WSS `devices.integrate` → `devices.integrated`. 허용 목록 밖의 통합·`entity_id`·HA `flow_id`·접속 키는 클라우드에 없음
+- 허용 목록은 `@howling/contracts` `DEVICE_INTEGRATIONS`. UI는 제품 이름만 보여 줍니다.
+- MCP `list_devices` (`read`), `create_device` (`edit`). 응답은 summary만
+- WSS `devices.create` → `devices.created`. 둘 다 `entity_id` 없음
+
+숫자 helper 기본값: min 0, max 10000, step 1. 이미 같은 이름이 있으면 그 기기를 돌려줍니다.
 
 `device.changed` 트리거와 `adapter: "device"` Effect는 허브(`ha`) connection이 필요합니다. 미등록 device는 배포를 실패로 보지 않습니다. 나중에 같은 id로 나타나면 그때 실행됩니다.
 

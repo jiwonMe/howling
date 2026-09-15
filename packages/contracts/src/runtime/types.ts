@@ -27,6 +27,10 @@ export const reservedRuntimeMessageTypes = [
   "detail.response",
   "desired.data",
   "devices.snapshot",
+  "devices.create",
+  "devices.created",
+  "devices.integrate",
+  "devices.integrated",
 ] as const;
 
 export type ReservedRuntimeMessageType =

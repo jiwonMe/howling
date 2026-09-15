@@ -10,27 +10,7 @@ export const replaceSiteDevices = async (
   devices: readonly DeviceSummary[],
 ): Promise<void> => {
   for (const item of devices) {
-    await pool.query(
-      `INSERT INTO site_devices
-         (site_id, id, name, kind, actions_json, numeric, available, updated_at)
-       VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, now())
-       ON CONFLICT (site_id, id) DO UPDATE SET
-         name = EXCLUDED.name,
-         kind = EXCLUDED.kind,
-         actions_json = EXCLUDED.actions_json,
-         numeric = EXCLUDED.numeric,
-         available = EXCLUDED.available,
-         updated_at = now()`,
-      [
-        siteId,
-        item.id,
-        item.name,
-        item.kind,
-        JSON.stringify(item.actions),
-        item.numeric,
-        item.available,
-      ],
-    );
+    await upsertSiteDevice(pool, siteId, item);
   }
   const ids = devices.map((item) => item.id);
   if (ids.length === 0) {
@@ -44,6 +24,34 @@ export const replaceSiteDevices = async (
      SET available = FALSE, updated_at = now()
      WHERE site_id = $1 AND NOT (id = ANY($2::text[]))`,
     [siteId, ids],
+  );
+};
+
+export const upsertSiteDevice = async (
+  pool: pg.Pool,
+  siteId: string,
+  item: DeviceSummary,
+): Promise<void> => {
+  await pool.query(
+    `INSERT INTO site_devices
+       (site_id, id, name, kind, actions_json, numeric, available, updated_at)
+     VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, now())
+     ON CONFLICT (site_id, id) DO UPDATE SET
+       name = EXCLUDED.name,
+       kind = EXCLUDED.kind,
+       actions_json = EXCLUDED.actions_json,
+       numeric = EXCLUDED.numeric,
+       available = EXCLUDED.available,
+       updated_at = now()`,
+    [
+      siteId,
+      item.id,
+      item.name,
+      item.kind,
+      JSON.stringify(item.actions),
+      item.numeric,
+      item.available,
+    ],
   );
 };
 

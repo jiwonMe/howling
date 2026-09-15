@@ -112,6 +112,12 @@ describe("HA mapping and adapter", () => {
         );
         return { ok: true };
       },
+      request: async () => {
+        throw new Error("not used");
+      },
+      rest: async () => {
+        throw new Error("not used");
+      },
       stop: () => undefined,
     };
     const host = createTestHost({

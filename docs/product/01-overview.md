@@ -67,7 +67,7 @@ flowchart LR
 | --- | --- |
 | `/` | API ready, runtime online, 허브 상태 |
 | `/connections` | pairing code, 허브·MCP 상태, scoped token 발급 |
-| `/devices` | 허브 기기 이름·종류·동작. `entity_id` 없음 |
+| `/devices` | 허브 기기, 집 기기 연결, 가상 기기. `entity_id` 없음 |
 | `/flows` | 초안·활성 revision·배포 상태, 최근 실행 |
 | `/flows/:flowId` | 팔레트, React Flow, binding, 저장·검증·시험·배포 |
 | `/runs/:runId` | revision, trigger, 노드/edge 이벤트. SSE, 실패 시 polling, 원본 상세 |

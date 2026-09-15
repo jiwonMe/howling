@@ -19,6 +19,8 @@ import { retainLocal } from "./data/retain.js";
 import { flushUnackedObserve, tickObserver } from "./observe/tick.js";
 import { resolveHaEndpoint } from "./ha/supervisor.js";
 import { createDeviceAwareAdapter } from "./devices/adapter.js";
+import { handleDevicesCreate } from "./devices/create.js";
+import { handleDevicesIntegrate } from "./devices/integrate.js";
 import { reportDevices } from "./devices/report.js";
 import { syncDeviceCatalog, upsertDevices } from "./devices/store.js";
 import { dispatchDeviceTriggers } from "./devices/triggers.js";
@@ -72,6 +74,26 @@ const gateway = startRuntimeGateway(
     handleCloudControl(host, gateway, envelope, {
       onOauthCode: (state, code) => {
         void acceptOauthCode(state, code);
+      },
+      onDevicesCreate: async (payload) => {
+        const result = await handleDevicesCreate(
+          { db, runtimeId: session.runtimeId, ...(ha ? { ha } : {}) },
+          payload,
+        );
+        if (result.device) {
+          reportDevices(gateway, db);
+        }
+        return result;
+      },
+      onDevicesIntegrate: async (payload) => {
+        const result = await handleDevicesIntegrate(
+          { db, runtimeId: session.runtimeId, ...(ha ? { ha } : {}) },
+          payload,
+        );
+        if (result.status === "done") {
+          reportDevices(gateway, db);
+        }
+        return result;
       },
     });
   },

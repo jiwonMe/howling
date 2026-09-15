@@ -143,21 +143,48 @@ export {
   syncStreamSchema,
 } from "./runtime/streams.js";
 export {
+  creatableDeviceKindSchema,
   deviceActionRequestSchema,
   deviceActionSchema,
+  deviceCreateBodySchema,
+  deviceCreateRequestSchema,
+  deviceCreateResultSchema,
   deviceKindSchema,
   deviceSummarySchema,
   deviceTriggerConfigSchema,
   devicesSnapshotSchema,
 } from "./devices.js";
 export type {
+  CreatableDeviceKind,
   DeviceAction,
   DeviceActionRequest,
+  DeviceCreateBody,
+  DeviceCreateRequest,
+  DeviceCreateResult,
   DeviceKind,
   DeviceSummary,
   DeviceTriggerConfig,
   DevicesSnapshot,
 } from "./devices.js";
+export {
+  DEVICE_INTEGRATIONS,
+  VIRTUAL_DEVICE,
+  deviceIntegrateBodySchema,
+  deviceIntegrateFieldSchema,
+  deviceIntegrateRequestSchema,
+  deviceIntegrateResultSchema,
+  deviceIntegrationIdSchema,
+  deviceIntegrationOf,
+  deviceIntegrationSchema,
+} from "./device-integrations.js";
+export type {
+  DeviceIntegrateBody,
+  DeviceIntegrateField,
+  DeviceIntegrateRequest,
+  DeviceIntegrateResult,
+  DeviceIntegration,
+  DeviceIntegrationId,
+} from "./device-integrations.js";
 export type {
   DesiredData,
   DetailRequest,

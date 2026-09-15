@@ -3,6 +3,7 @@
  */
 import {
   MCP_TOOL_SCOPES,
+  deviceCreateBodySchema,
   draftSaveSchema,
   deployRequestSchema,
   testSessionRequestSchema,
@@ -22,6 +23,7 @@ import {
 } from "../flows/read-services.js";
 import { startDryRun } from "../flows/start-dry-run.js";
 import { startLiveRun } from "../flows/start-live-run.js";
+import { createDeviceFor } from "../devices/create.js";
 import { listDevicesFor } from "../devices/read.js";
 
 type ToolName = keyof typeof MCP_TOOL_SCOPES;
@@ -50,6 +52,17 @@ const invoke = async (
   }
   if (name === "list_devices") {
     return listDevicesFor(pool, actor);
+  }
+  if (name === "create_device") {
+    const parsed = deviceCreateBodySchema.safeParse(args);
+    if (!parsed.success) {
+      return {
+        ok: false,
+        status: 400,
+        body: { error: { code: "invalid_request", message: "name and kind required" } },
+      };
+    }
+    return createDeviceFor(pool, actor, parsed.data);
   }
   if (name === "get_flow") {
     return getFlowFor(pool, actor, flowId);

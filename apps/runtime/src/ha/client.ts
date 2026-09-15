@@ -23,6 +23,8 @@ export interface HaHandle {
     service: string,
     data: Record<string, unknown>,
   ) => Promise<unknown>;
+  readonly request: (type: string, extra?: Record<string, unknown>) => Promise<unknown>;
+  readonly rest: (method: string, path: string, body?: unknown) => Promise<unknown>;
   readonly stop: () => void;
 }
 
@@ -103,6 +105,7 @@ export const startHaConnector = (input: HaConnectorInput): HaHandle => {
         success?: boolean;
         id?: number | string;
         result?: unknown;
+        error?: { message?: string };
         event?: {
           data?: {
             entity_id?: string;
@@ -170,7 +173,7 @@ export const startHaConnector = (input: HaConnectorInput): HaHandle => {
         const wait = pending.get(id);
         pending.delete(id);
         if (message.success === false) {
-          wait?.(new Error("ha request failed"));
+          wait?.(new Error(message.error?.message ?? "ha request failed"));
           return;
         }
         wait?.(message.result);
@@ -217,6 +220,54 @@ export const startHaConnector = (input: HaConnectorInput): HaHandle => {
       nextId += 1;
       input.onCall?.({ id, domain, service });
       return restCall(domain, service, data);
+    },
+    request: (type, extra = {}) => {
+      if (stopped || !socket || socket.readyState !== WebSocket.OPEN) {
+        return Promise.reject(new Error("ha disconnected"));
+      }
+      const id = nextId;
+      nextId += 1;
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          pending.delete(id);
+          reject(new Error("ha request timeout"));
+        }, 8000);
+        pending.set(id, (value) => {
+          clearTimeout(timer);
+          if (value instanceof Error) {
+            reject(value);
+            return;
+          }
+          resolve(value);
+        });
+        send({ id, type, ...extra });
+      });
+    },
+    rest: async (method, path, body) => {
+      const response = await fetch(`${input.url.replace(/\/$/, "")}${path}`, {
+        method,
+        headers: {
+          authorization: `Bearer ${input.token}`,
+          ...(body !== undefined ? { "content-type": "application/json" } : {}),
+        },
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+        signal: AbortSignal.timeout(20_000),
+      });
+      const text = await response.text();
+      let parsed: unknown;
+      try {
+        parsed = text ? (JSON.parse(text) as unknown) : undefined;
+      } catch {
+        parsed = text;
+      }
+      if (!response.ok) {
+        const message =
+          parsed && typeof parsed === "object" && "message" in parsed && typeof parsed.message === "string"
+            ? parsed.message
+            : "";
+        throw new Error(`ha rest ${String(response.status)}${message ? ` ${message}` : ""}`);
+      }
+      return parsed;
     },
     stop: () => {
       stopped = true;
