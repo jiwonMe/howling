@@ -16,6 +16,8 @@ import type pg from "pg";
 import { requireCsrf } from "../auth/session.js";
 import { requireSiteMember } from "../sites/access.js";
 import { createRevision } from "./create-revision.js";
+import { deactivateFlow } from "./deactivate.js";
+import { deleteFlow } from "./delete.js";
 import { deployRevision } from "./deploy-revision.js";
 import {
   createFlow,
@@ -179,6 +181,34 @@ export const registerFlowRoutes = (
       { siteId: member.siteId, permissions: ownerPermissions },
       flowId,
       parsed.data,
+    );
+    return reply.code(result.status).send(result.body);
+  });
+
+  app.post("/api/v1/sites/:siteId/flows/:flowId/deactivate", async (request, reply) => {
+    const member = await gate(request, reply, true);
+    if (!member) {
+      return;
+    }
+    const { flowId } = request.params as { flowId: string };
+    const result = await deactivateFlow(
+      pool,
+      { siteId: member.siteId, permissions: ownerPermissions },
+      flowId,
+    );
+    return reply.code(result.status).send(result.body);
+  });
+
+  app.delete("/api/v1/sites/:siteId/flows/:flowId", async (request, reply) => {
+    const member = await gate(request, reply, true);
+    if (!member) {
+      return;
+    }
+    const { flowId } = request.params as { flowId: string };
+    const result = await deleteFlow(
+      pool,
+      { siteId: member.siteId, permissions: ownerPermissions },
+      flowId,
     );
     return reply.code(result.status).send(result.body);
   });

@@ -2,6 +2,9 @@
  * Flow·pairing·run HTTP. CSRF를 붙인다.
  */
 import { UnauthorizedError } from "./api.js";
+import type { FlowDetail, FlowListItem, RunRow, TokenRow } from "./flow-types.js";
+
+export type { FlowDetail, FlowListItem, RunRow, TokenRow };
 
 const ask = async <T>(
   url: string,
@@ -169,6 +172,32 @@ export const getDeployment = (siteId: string, deploymentId: string) =>
     `/api/v1/sites/${siteId}/deployments/${deploymentId}`,
   );
 
+export const deactivateFlow = (siteId: string, flowId: string, csrf: string) =>
+  ask<{ deploymentId: string; generation: number }>(
+    `/api/v1/sites/${siteId}/flows/${flowId}/deactivate`,
+    { method: "POST", csrf, body: "{}" },
+  );
+
+export const deleteFlow = (siteId: string, flowId: string, csrf: string) =>
+  ask<{ ok: true }>(`/api/v1/sites/${siteId}/flows/${flowId}`, {
+    method: "DELETE",
+    csrf,
+  });
+
+export const waitDeployment = async (
+  siteId: string,
+  deploymentId: string,
+): Promise<{ status: string; revision_id: string; generation: number }> => {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const row = await getDeployment(siteId, deploymentId);
+    if (row.status === "active" || row.status === "failed" || row.status === "inactive") {
+      return row;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error("deployment wait timeout");
+};
+
 export const listRuns = (siteId: string, flowId?: string) =>
   ask<{ runs: RunRow[] }>(
     `/api/v1/sites/${siteId}/runs${flowId ? `?flowId=${flowId}` : ""}`,
@@ -229,53 +258,3 @@ export const revokeToken = (siteId: string, csrf: string, tokenId: string) =>
     csrf,
   });
 
-export interface TokenRow {
-  readonly id: string;
-  readonly name: string;
-  readonly scopes: readonly string[];
-  readonly flowId: string | null;
-  readonly revokedAt: string | null;
-}
-
-export interface FlowListItem {
-  readonly id: string;
-  readonly name: string;
-  readonly version: number;
-  readonly revision_id: string | null;
-  readonly deploy_status: string | null;
-}
-
-export interface FlowDetail {
-  readonly flowId: string;
-  readonly name: string;
-  readonly draft: {
-    readonly version: number;
-    readonly definition: unknown;
-    readonly triggers: unknown;
-    readonly connections: unknown;
-    readonly executionPolicy?: { readonly mode: "live" | "dry-run"; readonly captureRaw: boolean };
-  };
-  readonly editor: {
-    readonly version: number;
-    readonly positions: Record<string, { x: number; y: number }>;
-    readonly viewport: { x: number; y: number; zoom: number };
-  };
-  readonly deployment: {
-    readonly id: string;
-    readonly revisionId: string;
-    readonly status: string;
-    readonly generation: number;
-  } | null;
-  readonly revisions?: readonly { readonly id: string; readonly created_at: string }[];
-}
-
-export interface RunRow {
-  readonly runId: string;
-  readonly flowId: string;
-  readonly revisionId: string;
-  readonly status: string;
-  readonly lastSeq: number;
-  readonly trigger: unknown;
-  readonly events: readonly { sequence: number; type: string; nodeId?: string }[];
-  readonly runMode?: string;
-}

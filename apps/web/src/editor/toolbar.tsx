@@ -5,11 +5,12 @@ import type { WorkflowDefinition } from "@howling/core";
 import { defaultTestFixtures } from "./test-fixtures.js";
 import {
   createRevision,
+  deactivateFlow,
   deployRevision,
-  getDeployment,
   startLiveRun,
   startTestSession,
   validateFlow,
+  waitDeployment,
 } from "../lib/flows-api.js";
 import { repairBindings } from "../lib/flow-model.js";
 import { buttonRecipe } from "../ui/button.css.js";
@@ -28,6 +29,7 @@ export const EditorToolbar = (props: {
   readonly onOpenedRun: (runId: string) => void;
   readonly captureRaw: boolean;
   readonly onCaptureRaw: (value: boolean) => void;
+  readonly deployStatus?: string;
 }) => (
   <>
     <label>
@@ -85,6 +87,22 @@ export const EditorToolbar = (props: {
     >
       배포
     </button>
+    {props.deployStatus === "active" ? (
+      <button
+        className={buttonRecipe()}
+        data-testid="deactivate-flow"
+        type="button"
+        onClick={() => {
+          void deactivateFlow(props.siteId, props.flowId, props.csrf)
+            .then((deployed) => waitDeploy(props, deployed.deploymentId, "해제"))
+            .catch((caught: unknown) =>
+              props.onMessage(caught instanceof Error ? caught.message : "해제 실패"),
+            );
+        }}
+      >
+        해제
+      </button>
+    ) : null}
     <button
       className={buttonRecipe()}
       data-testid="dry-run-flow"
@@ -158,13 +176,7 @@ const waitDeploy = async (
   label: string,
 ) => {
   props.onMessage(`${label} 요청`);
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    const row = await getDeployment(props.siteId, deploymentId);
-    props.onDeployStatus(row.status);
-    if (row.status === "active" || row.status === "failed") {
-      props.onMessage(`배포 ${row.status}`);
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  }
+  const row = await waitDeployment(props.siteId, deploymentId);
+  props.onDeployStatus(row.status);
+  props.onMessage(`배포 ${row.status}`);
 };

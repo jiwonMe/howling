@@ -12,6 +12,8 @@ import {
 import type pg from "pg";
 import type { Actor, ServiceResult } from "../flows/access.js";
 import { createRevision } from "../flows/create-revision.js";
+import { deactivateFlow } from "../flows/deactivate.js";
+import { deleteFlow } from "../flows/delete.js";
 import { deployRevision } from "../flows/deploy-revision.js";
 import { requestRunDetail } from "../data/detail.js";
 import {
@@ -118,6 +120,12 @@ const invoke = async (
       return { ok: false, status: 400, body: { error: { code: "invalid_request", message: "revisionId required" } } };
     }
     return deployRevision(pool, actor, flowId, parsed.data);
+  }
+  if (name === "deactivate_flow") {
+    return deactivateFlow(pool, actor, flowId);
+  }
+  if (name === "delete_flow") {
+    return deleteFlow(pool, actor, flowId);
   }
   if (name === "start_live_run") {
     return startLiveRun(pool, actor, flowId, {

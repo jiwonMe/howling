@@ -1,0 +1,1 @@
+ALTER TABLE active_deployments ADD COLUMN inactive INTEGER NOT NULL DEFAULT 0;

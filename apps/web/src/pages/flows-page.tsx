@@ -1,43 +1,30 @@
 /**
- * 플로 목록과 최근 실행.
+ * 플로 초안과 배포 상태. 실행 목록은 로그 탭.
  */
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { loginHref, UnauthorizedError } from "../lib/api.js";
-import { createFlow, listFlows, listRuns, type FlowListItem, type RunRow } from "../lib/flows-api.js";
+import { createFlow, listFlows, type FlowListItem } from "../lib/flows-api.js";
 import { loadStatus } from "../lib/status.js";
 import { buttonRecipe } from "../ui/button.css.js";
 import { iconMark } from "../ui/icon.css.js";
 import { PlusOutline18 } from "../ui/icons/index.js";
 import { caption, header, page, section, sectionTitle, title } from "../ui/layout.css.js";
-import { RunTable } from "../ui/run-table.js";
-import {
-  empty,
-  tableCell,
-  tableHead,
-  tableLink,
-  tableMono,
-  tableWrap,
-} from "../ui/table.css.js";
+import { FlowTable } from "./flows-table.js";
 
 export const FlowsPage = () => {
   const navigate = useNavigate();
   const [siteId, setSiteId] = useState<string>();
   const [csrf, setCsrf] = useState<string>();
   const [flows, setFlows] = useState<FlowListItem[]>([]);
-  const [runs, setRuns] = useState<RunRow[]>([]);
 
   useEffect(() => {
     void loadStatus()
       .then(async (status) => {
         setSiteId(status.site.id);
         setCsrf(status.user.csrfToken);
-        const [flowList, runList] = await Promise.all([
-          listFlows(status.site.id),
-          listRuns(status.site.id),
-        ]);
+        const flowList = await listFlows(status.site.id);
         setFlows(flowList.flows);
-        setRuns(runList.runs);
       })
       .catch((caught: unknown) => {
         if (caught instanceof UnauthorizedError) {
@@ -59,7 +46,7 @@ export const FlowsPage = () => {
       <header className={header}>
         <div>
           <h1 className={title}>플로</h1>
-          <p className={caption}>초안과 배포 상태</p>
+          <p className={caption}>초안과 배포 상태. 목록에서 지울 수 있습니다.</p>
         </div>
         <button
           className={buttonRecipe({ intent: "primary" })}
@@ -77,50 +64,13 @@ export const FlowsPage = () => {
       </header>
       <section className={section}>
         <h2 className={sectionTitle}>초안</h2>
-        <FlowTable flows={flows} />
+        <FlowTable
+          csrf={csrf}
+          flows={flows}
+          siteId={siteId}
+          onRemoved={(flowId) => setFlows((rows) => rows.filter((row) => row.id !== flowId))}
+        />
       </section>
-      <section className={section}>
-        <h2 className={sectionTitle}>최근 실행</h2>
-        <RunTable runs={runs} />
-      </section>
-    </div>
-  );
-};
-
-const FlowTable = (props: { readonly flows: readonly FlowListItem[] }) => {
-  if (props.flows.length === 0) {
-    return <p className={empty}>플로가 없습니다.</p>;
-  }
-  return (
-    <div className={tableWrap}>
-      <table>
-        <thead>
-          <tr>
-            <th className={tableHead} scope="col">
-              이름
-            </th>
-            <th className={tableHead} scope="col">
-              Revision
-            </th>
-            <th className={tableHead} scope="col">
-              Deploy
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {props.flows.map((flow) => (
-            <tr data-testid={`flow-${flow.id}`} key={flow.id}>
-              <td className={tableCell}>
-                <Link className={tableLink} to={`/flows/${flow.id}`}>
-                  {flow.name}
-                </Link>
-              </td>
-              <td className={`${tableCell} ${tableMono}`}>{flow.revision_id ?? "없음"}</td>
-              <td className={tableCell}>{flow.deploy_status ?? "draft"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 };

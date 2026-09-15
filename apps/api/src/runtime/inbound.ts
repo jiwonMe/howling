@@ -49,7 +49,7 @@ const dispatchRuntimeControl = async (
     await setDeploymentStatus(
       pool,
       payload.deploymentId,
-      payload.status === "active" ? "active" : "failed",
+      payload.status === "active" || payload.status === "inactive" ? payload.status : "failed",
       payload.error,
     );
     return;

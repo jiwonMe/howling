@@ -105,8 +105,86 @@ export const navLink = recipe({
   },
 });
 
-export const railMeta = style({
+export const railFoot = style({
   marginTop: "auto",
+  display: "flex",
+  flexDirection: "column",
+  gap: vars.space.md,
+});
+
+export const railStatus = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: 2,
+  paddingTop: vars.space.md,
+  borderTop: `1px solid ${vars.color.border}`,
+  "@media": {
+    "screen and (max-width: 767px)": {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      columnGap: vars.space.md,
+      rowGap: vars.space.xs,
+      paddingTop: vars.space.sm,
+    },
+  },
+});
+
+export const railStatusRow = style({
+  display: "grid",
+  gridTemplateColumns: "6px 52px minmax(0, 1fr)",
+  alignItems: "center",
+  columnGap: vars.space.sm,
+  minWidth: 0,
+  margin: 0,
+  fontSize: "11px",
+  lineHeight: "16px",
+  color: vars.color.muted,
+  "@media": {
+    "screen and (max-width: 767px)": {
+      display: "flex",
+      gridTemplateColumns: "none",
+    },
+  },
+});
+
+export const railDot = recipe({
+  base: {
+    width: 6,
+    height: 6,
+    borderRadius: "999px",
+    justifySelf: "center",
+    flexShrink: 0,
+  },
+  variants: {
+    ok: {
+      true: { backgroundColor: vars.color.online },
+      false: { backgroundColor: vars.color.subtle },
+    },
+  },
+  defaultVariants: {
+    ok: false,
+  },
+});
+
+export const railStatusValue = recipe({
+  base: {
+    fontFamily: vars.font.mono,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  variants: {
+    ok: {
+      true: { color: vars.color.online },
+      false: { color: vars.color.subtle },
+    },
+  },
+  defaultVariants: {
+    ok: false,
+  },
+});
+
+export const railMeta = style({
   display: "flex",
   flexDirection: "column",
   gap: vars.space.sm,

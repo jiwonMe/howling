@@ -70,6 +70,8 @@ export const MCP_TOOL_SCOPES = {
   start_dry_run: ["run"],
   create_revision: ["deploy"],
   deploy_revision: ["deploy"],
+  deactivate_flow: ["deploy"],
+  delete_flow: ["edit"],
   start_live_run: ["run"],
   get_run: ["read"],
   get_run_summary: ["read"],

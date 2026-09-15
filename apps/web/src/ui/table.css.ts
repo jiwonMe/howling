@@ -64,3 +64,17 @@ export const empty = style({
   fontSize: vars.font.sm,
   color: vars.color.muted,
 });
+
+export const tableActions = style({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: vars.space.sm,
+  justifyContent: "flex-end",
+});
+
+export const tableStack = style({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-end",
+  gap: vars.space.sm,
+});

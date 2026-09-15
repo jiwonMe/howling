@@ -5,7 +5,14 @@ import { NODE_CATALOG_VERSION, type RevisionArtifact } from "@howling/contracts"
 import type { HowlingEngine } from "@howling/core";
 import type Database from "better-sqlite3";
 import { assertMcpReady } from "../mcp/deploy.js";
-import { activatePointer, getDeployment, nextStateEpoch, storeArtifact } from "../store/artifacts.js";
+import {
+  activatePointer,
+  deactivatePointer,
+  getDeployment,
+  lastGeneration,
+  nextStateEpoch,
+  storeArtifact,
+} from "../store/artifacts.js";
 
 export const activateArtifact = (
   db: Database.Database,
@@ -15,13 +22,19 @@ export const activateArtifact = (
     readonly generation: number;
     readonly artifact: RevisionArtifact;
     readonly rollback?: boolean;
+    readonly deactivate?: boolean;
     readonly stateEpoch?: "reset" | "keep";
   },
-): { status: "active" | "failed" | "ignored"; error?: string } => {
-  const current = getDeployment(db, input.artifact.flowId);
-  if (current && current.generation > input.generation) {
+): { status: "active" | "failed" | "ignored" | "inactive"; error?: string } => {
+  const seen = lastGeneration(db, input.artifact.flowId);
+  if (seen !== undefined && seen > input.generation) {
     return { status: "ignored" };
   }
+  if (input.deactivate) {
+    deactivatePointer(db, input.artifact.flowId, input.generation);
+    return { status: "inactive" };
+  }
+  const current = getDeployment(db, input.artifact.flowId);
   if (
     input.artifact.triggers.some(
       (item) => item.kind === "ha.state_changed" || item.kind === "device.changed",

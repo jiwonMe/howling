@@ -1,22 +1,20 @@
 /**
- * 사이트 준비 상태와 기기 현재값.
+ * 기기 현재값. 실행 목록은 로그 탭.
  */
 import type { DeviceSummary } from "@howling/contracts";
 import { useEffect, useState } from "react";
 import { loginHref, UnauthorizedError } from "../lib/api.js";
-import { haStatus, runtimeDetail, siteClaim } from "../lib/dashboard.js";
 import { getDevices } from "../lib/devices-api.js";
-import { listRuns, type RunRow } from "../lib/flows-api.js";
+import { listFlows, type FlowListItem } from "../lib/flows-api.js";
 import { loadStatus, type StatusSnapshot } from "../lib/status.js";
-import { caption, header, lede, page, section, sectionTitle, title } from "../ui/layout.css.js";
-import { RunTable } from "../ui/run-table.js";
-import { stat, statDetail, statLabel, statStrip, statValue } from "../ui/stat.css.js";
+import { header, page, title } from "../ui/layout.css.js";
+import { ActiveFlows } from "./active-flows.js";
 import { DeviceDashboard } from "./device-dashboard.js";
 
 export const StatusPage = () => {
   const [data, setData] = useState<StatusSnapshot>();
-  const [runs, setRuns] = useState<readonly RunRow[]>([]);
   const [devices, setDevices] = useState<readonly DeviceSummary[]>([]);
+  const [flows, setFlows] = useState<readonly FlowListItem[]>([]);
   const [error, setError] = useState<string>();
 
   useEffect(() => {
@@ -28,13 +26,13 @@ export const StatusPage = () => {
           setData(next);
           setError(undefined);
         }
-        const [listed, catalog] = await Promise.all([
-          listRuns(next.site.id),
+        const [catalog, listed] = await Promise.all([
           getDevices(next.site.id).catch(() => ({ devices: [] })),
+          listFlows(next.site.id).catch(() => ({ flows: [] })),
         ]);
         if (!cancelled) {
-          setRuns(listed.runs);
           setDevices(catalog.devices);
+          setFlows(listed.flows);
         }
       } catch (caught) {
         if (caught instanceof UnauthorizedError) {
@@ -72,8 +70,6 @@ export const StatusPage = () => {
     );
   }
 
-  const claim = siteClaim(data);
-  const ha = haStatus(data.runtime);
   return (
     <div className={page()}>
       <header className={header}>
@@ -81,33 +77,16 @@ export const StatusPage = () => {
           <h1 className={title}>Howling</h1>
         </div>
       </header>
-      <p className={lede}>{claim.title}</p>
-      <p className={caption}>{claim.detail}</p>
-      <section className={statStrip()}>
-        <article className={stat}>
-          <p className={statLabel}>API</p>
-          <p className={statValue({ online: data.ready.status === "ready" })}>
-            {data.ready.status === "ready" ? "ready" : "not_ready"}
-          </p>
-          <p className={statDetail}>
-            health {data.health.status} · db {data.ready.checks.database ? "ok" : "down"}
-          </p>
-        </article>
-        <article className={stat}>
-          <p className={statLabel}>Runtime</p>
-          <p className={statValue({ online: data.runtime.online })}>
-            {data.runtime.online ? "online" : "offline"}
-          </p>
-          <p className={statDetail}>{runtimeDetail(data.runtime)}</p>
-        </article>
-        <article className={stat}>
-          <p className={statLabel}>허브</p>
-          <p className={statValue({ online: ha === "ready" })}>{ha}</p>
-          <p className={statDetail}>
-            {ha === "not_configured" ? "local setup only" : `허브 ${ha}`}
-          </p>
-        </article>
-      </section>
+      <ActiveFlows
+        csrf={data.user.csrfToken}
+        flows={flows}
+        siteId={data.site.id}
+        onChanged={() => {
+          void listFlows(data.site.id)
+            .then((listed) => setFlows(listed.flows))
+            .catch(() => undefined);
+        }}
+      />
       <DeviceDashboard
         csrf={data.user.csrfToken}
         devices={devices}
@@ -119,10 +98,6 @@ export const StatusPage = () => {
           setDevices((current) => current.filter((item) => item.id !== deviceId));
         }}
       />
-      <section className={section}>
-        <h2 className={sectionTitle}>최근 실행</h2>
-        <RunTable runs={runs} />
-      </section>
     </div>
   );
 };

@@ -70,7 +70,7 @@ Cloud는 `(runtimeId, stream, syncSeq)`로 중복을 제거하고 연속 `syncSe
 - `keep`은 **같은 revision의 기존 epoch**만 고를 수 있습니다. revision 사이 state migration은 없습니다.
 - 이미 수락한 queue와 진행 중 run은 이전 epoch를 유지합니다. 신규 입력만 되돌린 revision으로 실행됩니다.
 
-편집기 **되돌리기**는 직전 revision + 초기화입니다. Active ACK 전에는 완료로 표시하지 않습니다.
+편집기 **되돌리기**는 직전 revision + 초기화입니다. Active ACK 전에는 완료로 표시하지 않습니다. 배포를 끄려면 **해제**입니다. 되돌리기는 끄기가 아닙니다.
 
 ## 로컬 runtime HTTP
 

@@ -34,9 +34,9 @@ Effect 입력:
 | Tool | Scope |
 | --- | --- |
 | list_flows, get_flow, get_run, get_run_summary, list_devices | `read` |
-| save_draft, validate_flow, create_device, update_device, delete_device | `edit` |
+| save_draft, validate_flow, delete_flow, create_device, update_device, delete_device | `edit` |
 | start_dry_run | `run` |
-| create_revision, deploy_revision | `deploy` |
+| create_revision, deploy_revision, deactivate_flow | `deploy` |
 | start_live_run | `run` + 활성 배포 |
 | get_run_detail | `data.read`. 중계만, 원본 ON을 켜지 않음 |
 

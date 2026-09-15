@@ -8,13 +8,14 @@ export const desiredDeploymentSchema = z.object({
   generation: z.number().int().positive(),
   artifact: z.unknown(),
   rollback: z.boolean().optional(),
+  deactivate: z.boolean().optional(),
   stateEpoch: z.enum(["reset", "keep"]).optional(),
 });
 
 export const activationResultSchema = z.object({
   deploymentId: z.string().min(1),
   generation: z.number().int().nonnegative(),
-  status: z.enum(["active", "failed", "ignored"]),
+  status: z.enum(["active", "failed", "ignored", "inactive"]),
   error: z.string().optional(),
 });
 

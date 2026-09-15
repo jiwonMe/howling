@@ -6,6 +6,7 @@ import { ConnectionsPage } from "./pages/connections-page.js";
 import { DevicesPage } from "./pages/devices-page.js";
 import { EditorPage } from "./pages/editor-page.js";
 import { FlowsPage } from "./pages/flows-page.js";
+import { LogsPage } from "./pages/logs-page.js";
 import { RunPage } from "./pages/run-page.js";
 import { AnalyticsPage } from "./analytics/page.js";
 import { StatusPage } from "./pages/status-page.js";
@@ -20,6 +21,7 @@ export const App = () => (
         <Route path="/devices" element={<DevicesPage />} />
         <Route path="/flows" element={<FlowsPage />} />
         <Route path="/flows/:flowId" element={<EditorPage />} />
+        <Route path="/logs" element={<LogsPage />} />
         <Route path="/runs/:runId" element={<RunPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

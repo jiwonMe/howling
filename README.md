@@ -43,11 +43,12 @@ pnpm test:e2e
 
 | 경로 | 내용 |
 | --- | --- |
-| `/` | API·runtime·허브 상태와 기기 현재값 |
+| `/` | 기기 현재값 |
 | `/connections` | pairing, 허브·MCP, 원본 전송·보관, OAuth 제공자, scoped token |
 | `/devices` | 허브 기기, 지금 상태, 집 기기 연결, 가상 기기 |
-| `/flows` | 초안·배포 목록 |
+| `/flows` | 초안·배포 목록, 삭제 |
 | `/flows/:flowId` | 편집기 |
+| `/logs` | 플로 실행 기록 |
 | `/runs/:runId` | 실행 상세 |
 | `/analytics` | 관측 차트·필드 선택 |
 

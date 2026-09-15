@@ -118,6 +118,10 @@ describe.skipIf(!postgresUp)("scoped tokens and /mcp", () => {
         revisionId: "missing",
       });
       expect(deploy.statusCode).toBe(403);
+      const off = await callMcp(ctx.app, token, "deactivate_flow", { flowId });
+      expect(off.statusCode).toBe(403);
+      const removed = await callMcp(ctx.app, token, "delete_flow", { flowId });
+      expect(removed.statusCode).toBe(403);
       const live = await callMcp(ctx.app, token, "start_live_run", {
         flowId,
         input: {},

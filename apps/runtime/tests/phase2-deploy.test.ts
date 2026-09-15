@@ -48,4 +48,51 @@ describe("deployment generation", () => {
     expect(getDeployment(db, "flow-a")?.artifactId).toBe("rev-new");
     db.close();
   });
+
+  it("deactivates and ignores a late older activate", () => {
+    const { db } = openTestDb();
+    const engine = createEngine({ registry: createOfficialRegistry() });
+    const artifact = {
+      schemaVersion: 1 as const,
+      siteId: "site",
+      flowId: "flow-off",
+      revisionId: "rev-on",
+      definition: { ...definition("flow-off"), revision: "on" },
+      triggers: [],
+      connections: [],
+      requirements: {
+        protocolVersion: 1 as const,
+        nodeCatalogVersion: NODE_CATALOG_VERSION,
+        connectors: ["homeassistant"] as const,
+      },
+      executionPolicy: { mode: "live" as const, captureRaw: false },
+      artifactDigest: "x",
+    };
+    expect(
+      activateArtifact(db, engine, {
+        deploymentId: "dep-on",
+        generation: 1,
+        artifact,
+      }).status,
+    ).toBe("active");
+    expect(getDeployment(db, "flow-off")?.generation).toBe(1);
+    expect(
+      activateArtifact(db, engine, {
+        deploymentId: "dep-off",
+        generation: 2,
+        artifact,
+        deactivate: true,
+      }).status,
+    ).toBe("inactive");
+    expect(getDeployment(db, "flow-off")).toBeUndefined();
+    expect(
+      activateArtifact(db, engine, {
+        deploymentId: "dep-late",
+        generation: 1,
+        artifact,
+      }).status,
+    ).toBe("ignored");
+    expect(getDeployment(db, "flow-off")).toBeUndefined();
+    db.close();
+  });
 });

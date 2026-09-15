@@ -1,5 +1,5 @@
 /**
- * 대시보드 첫 화면용 상태 문구. 값은 있는 것만 쓴다.
+ * Runtime·허브 상태 라벨. 값은 있는 것만 쓴다.
  */
 import type { RuntimeStatus } from "@howling/contracts";
 import type { StatusSnapshot } from "./status.js";
@@ -16,35 +16,38 @@ export const mcpStatus = (runtime: RuntimeStatus): string => runtime.mcp?.status
 export const mcpToolCount = (runtime: RuntimeStatus): number =>
   runtime.mcp?.servers.reduce((sum, server) => sum + server.tools.length, 0) ?? 0;
 
-export const siteClaim = (
-  data: StatusSnapshot,
-): { readonly title: string; readonly detail: string } => {
-  const ha = haStatus(data.runtime);
-  if (data.ready.status !== "ready") {
-    return {
-      title: "API가 준비되지 않았습니다",
-      detail: `health ${data.health.status}. Database ${data.ready.checks.database ? "ok" : "down"}.`,
-    };
-  }
-  if (!data.runtime.online) {
-    return {
-      title: "Runtime이 오프라인입니다",
-      detail: "연결 화면에서 로컬 runtime을 pairing합니다.",
-    };
-  }
-  if (ha !== "ready") {
-    return {
-      title: "허브가 준비되지 않았습니다",
-      detail: "로컬 setup에서 주소와 토큰을 넣습니다.",
-    };
-  }
-  return {
-    title: "실행할 수 있습니다",
-    detail: "Runtime은 online이고 허브는 ready입니다.",
-  };
-};
-
 export const runtimeDetail = (runtime: RuntimeStatus): string => {
   const seen = runtime.lastSeenAt ?? "none";
   return `${runtime.runtimeId} · gen ${String(runtime.connectionGeneration)} · last ${seen}`;
+};
+
+export interface RailState {
+  readonly key: "api" | "runtime" | "ha";
+  readonly label: string;
+  readonly value: string;
+  readonly ok: boolean;
+}
+
+export const railStatesOf = (data: StatusSnapshot): readonly RailState[] => {
+  const ha = haStatus(data.runtime);
+  return [
+    {
+      key: "api",
+      label: "API",
+      value: data.ready.status === "ready" ? "ready" : "not_ready",
+      ok: data.ready.status === "ready",
+    },
+    {
+      key: "runtime",
+      label: "Runtime",
+      value: data.runtime.online ? "online" : "offline",
+      ok: data.runtime.online,
+    },
+    {
+      key: "ha",
+      label: "허브",
+      value: ha,
+      ok: ha === "ready",
+    },
+  ];
 };

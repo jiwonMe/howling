@@ -77,12 +77,13 @@ export const activatePointer = (
 ): void => {
   db.prepare(
     `INSERT INTO active_deployments
-       (flow_id, artifact_id, generation, state_epoch, created_at)
-     VALUES (?, ?, ?, ?, ?)
+       (flow_id, artifact_id, generation, state_epoch, created_at, inactive)
+     VALUES (?, ?, ?, ?, ?, 0)
      ON CONFLICT (flow_id) DO UPDATE SET
        artifact_id = excluded.artifact_id,
        generation = excluded.generation,
-       state_epoch = excluded.state_epoch
+       state_epoch = excluded.state_epoch,
+       inactive = 0
      WHERE excluded.generation >= active_deployments.generation`,
   ).run(
     input.flowId,
@@ -91,6 +92,25 @@ export const activatePointer = (
     input.stateEpoch,
     new Date().toISOString(),
   );
+};
+
+export const deactivatePointer = (
+  db: Database.Database,
+  flowId: string,
+  generation: number,
+): void => {
+  db.prepare(
+    `UPDATE active_deployments
+     SET inactive = 1, generation = ?
+     WHERE flow_id = ? AND generation <= ?`,
+  ).run(generation, flowId, generation);
+};
+
+export const lastGeneration = (db: Database.Database, flowId: string): number | undefined => {
+  const row = db
+    .prepare(`SELECT generation FROM active_deployments WHERE flow_id = ?`)
+    .get(flowId) as { generation: number } | undefined;
+  return row?.generation;
 };
 
 export const upsertArtifact = (
@@ -159,7 +179,8 @@ export const getDeployment = (
 ): { artifactId: string; stateEpoch: string; generation: number } | undefined => {
   const row = db
     .prepare(
-      `SELECT artifact_id, state_epoch, generation FROM active_deployments WHERE flow_id = ?`,
+      `SELECT artifact_id, state_epoch, generation FROM active_deployments
+       WHERE flow_id = ? AND inactive = 0`,
     )
     .get(flowId) as
     | { artifact_id: string; state_epoch: string; generation: number }
@@ -181,7 +202,8 @@ export const listActiveArtifacts = (
     .prepare(
       `SELECT a.id, a.flow_id, a.revision, a.definition_json, a.digest, a.triggers_json, a.execution_policy_json
        FROM revision_artifacts a
-       JOIN active_deployments d ON d.artifact_id = a.id`,
+       JOIN active_deployments d ON d.artifact_id = a.id
+       WHERE d.inactive = 0`,
     )
     .all() as {
     id: string;

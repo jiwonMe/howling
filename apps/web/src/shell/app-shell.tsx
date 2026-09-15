@@ -10,6 +10,7 @@ import { iconMark } from "../ui/icon.css.js";
 import {
   ChartLineOutline18,
   GaugeOutline18,
+  HistoryOutline18,
   HouseDashboard2Outline18,
   LightSwitchOutline18,
   NodesOutline18,
@@ -22,12 +23,14 @@ import {
   nav,
   navLink,
   rail,
+  railFoot,
   railId,
   railMeta,
   shell,
   skipLink,
   stage,
 } from "../ui/shell.css.js";
+import { RailStatus } from "./rail-status.js";
 
 export const AppShell = () => {
   const location = useLocation();
@@ -35,13 +38,27 @@ export const AppShell = () => {
   const editor = /^\/flows\/[^/]+$/.test(location.pathname);
 
   useEffect(() => {
-    void loadStatus()
-      .then(setSession)
-      .catch((caught: unknown) => {
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const next = await loadStatus();
+        if (!cancelled) {
+          setSession(next);
+        }
+      } catch (caught: unknown) {
         if (caught instanceof UnauthorizedError) {
           window.location.assign(loginHref);
         }
-      });
+      }
+    };
+    void refresh();
+    const timer = window.setInterval(() => {
+      void refresh();
+    }, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, []);
 
   return (
@@ -71,27 +88,34 @@ export const AppShell = () => {
             <NodesOutline18 aria-hidden className={iconMark} />
             플로
           </NavLink>
+          <NavLink className={({ isActive }) => navLink({ active: isActive })} to="/logs">
+            <HistoryOutline18 aria-hidden className={iconMark} />
+            로그
+          </NavLink>
           <NavLink className={({ isActive }) => navLink({ active: isActive })} to="/analytics">
             <ChartLineOutline18 aria-hidden className={iconMark} />
             관측
           </NavLink>
         </nav>
         {session ? (
-          <div className={railMeta}>
-            <span>{session.user.email ?? session.user.id}</span>
-            <span className={railId}>{session.site.name}</span>
-            <button
-              className={buttonRecipe()}
-              type="button"
-              onClick={() => {
-                void logout(session.user.csrfToken).then(() => {
-                  window.location.assign(loginHref);
-                });
-              }}
-            >
-              <RectLogoutOutline18 aria-hidden className={iconMark} />
-              로그아웃
-            </button>
+          <div className={railFoot}>
+            <RailStatus data={session} />
+            <div className={railMeta}>
+              <span>{session.user.email ?? session.user.id}</span>
+              <span className={railId}>{session.site.name}</span>
+              <button
+                className={buttonRecipe()}
+                type="button"
+                onClick={() => {
+                  void logout(session.user.csrfToken).then(() => {
+                    window.location.assign(loginHref);
+                  });
+                }}
+              >
+                <RectLogoutOutline18 aria-hidden className={iconMark} />
+                로그아웃
+              </button>
+            </div>
           </div>
         ) : null}
       </aside>

@@ -170,6 +170,7 @@ const dispatchCloudControl = (
       generation: payload.generation,
       artifact: payload.artifact as RevisionArtifact,
       ...(payload.rollback !== undefined ? { rollback: payload.rollback } : {}),
+      ...(payload.deactivate !== undefined ? { deactivate: payload.deactivate } : {}),
       ...(payload.stateEpoch !== undefined ? { stateEpoch: payload.stateEpoch } : {}),
     });
     gateway.send("activation.result", {

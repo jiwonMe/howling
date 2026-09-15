@@ -73,6 +73,8 @@ describe("phase 4 contracts", () => {
   it("maps platform tools to scopes", () => {
     expect(MCP_TOOL_SCOPES.start_live_run).toEqual(["run"]);
     expect(MCP_TOOL_SCOPES.deploy_revision).toEqual(["deploy"]);
+    expect(MCP_TOOL_SCOPES.deactivate_flow).toEqual(["deploy"]);
+    expect(MCP_TOOL_SCOPES.delete_flow).toEqual(["edit"]);
     expect(MCP_TOOL_SCOPES.get_run_summary).toEqual(["read"]);
     expect(MCP_TOOL_SCOPES.get_run_detail).toEqual(["data.read"]);
   });

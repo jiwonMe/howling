@@ -187,6 +187,7 @@ export const EditorPage = () => {
             onOpenedRun={(runId) => navigate(`/runs/${runId}`)}
             captureRaw={captureRaw}
             onCaptureRaw={setCaptureRaw}
+            {...(deployStatus ? { deployStatus } : {})}
             {...(previousRevision ? { previousRevision } : {})}
           />
         </div>
