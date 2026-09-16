@@ -14,6 +14,7 @@ import {
 } from "../lib/flows-api.js";
 import { repairBindings } from "../lib/flow-model.js";
 import { buttonRecipe } from "../ui/button.css.js";
+import { toolbarGroup, toolbarToggle } from "../ui/editor.css.js";
 
 export const EditorToolbar = (props: {
   readonly siteId: string;
@@ -32,80 +33,107 @@ export const EditorToolbar = (props: {
   readonly deployStatus?: string;
 }) => (
   <>
-    <label>
-      <input
-        checked={props.captureRaw}
-        data-testid="flow-capture-raw"
-        type="checkbox"
-        onChange={(event) => props.onCaptureRaw(event.target.checked)}
-      />{" "}
-      원본
-    </label>
-    <button className={buttonRecipe()} data-testid="save-draft" type="button" onClick={() => void props.persist()}>
-      저장
-    </button>
-    <button
-      className={buttonRecipe()}
-      data-testid="validate-flow"
-      type="button"
-      onClick={() => {
-        const next = repairBindings(props.definition);
-        props.onDefinition(next);
-        void validateFlow(props.siteId, props.flowId, props.csrf, next).then((result) =>
-          props.onMessage(result.ok ? "검증 통과" : result.diagnostics?.map((item) => item.message).join("; ") ?? ""),
-        );
-      }}
-    >
-      검증
-    </button>
-    <button
-      className={buttonRecipe()}
-      data-testid="create-revision"
-      type="button"
-      onClick={() => {
-        void props
-          .persist()
-          .then(() => createRevision(props.siteId, props.flowId, props.csrf))
-          .then((result) => props.onMessage(`revision ${result.revisionId}`));
-      }}
-    >
-      Revision
-    </button>
-    <button
-      className={buttonRecipe({ intent: "primary" })}
-      data-testid="deploy-flow"
-      type="button"
-      onClick={() => {
-        void props
-          .persist()
-          .then(() => createRevision(props.siteId, props.flowId, props.csrf))
-          .then((revision) =>
-            deployRevision(props.siteId, props.flowId, props.csrf, revision.revisionId),
-          )
-          .then((deployed) => waitDeploy(props, deployed.deploymentId, "배포"));
-      }}
-    >
-      배포
-    </button>
-    {props.deployStatus === "active" ? (
+    <div className={toolbarGroup}>
       <button
         className={buttonRecipe()}
-        data-testid="deactivate-flow"
+        data-testid="save-draft"
+        title="초안을 서버에 저장"
+        type="button"
+        onClick={() => void props.persist()}
+      >
+        저장
+      </button>
+      <button
+        className={buttonRecipe()}
+        data-testid="validate-flow"
+        title="빠진 설정과 잘못된 연결을 확인"
         type="button"
         onClick={() => {
-          void deactivateFlow(props.siteId, props.flowId, props.csrf)
-            .then((deployed) => waitDeploy(props, deployed.deploymentId, "해제"))
-            .catch((caught: unknown) =>
-              props.onMessage(caught instanceof Error ? caught.message : "해제 실패"),
-            );
+          const next = repairBindings(props.definition);
+          props.onDefinition(next);
+          void validateFlow(props.siteId, props.flowId, props.csrf, next).then((result) =>
+            props.onMessage(
+              result.ok
+                ? "검증 통과"
+                : `검증 실패: ${result.diagnostics?.map((item) => item.message).join("; ") ?? ""}`,
+            ),
+          );
         }}
       >
-        해제
+        검증
       </button>
-    ) : null}
+    </div>
+    <div className={toolbarGroup}>
+      <button
+        className={buttonRecipe()}
+        data-testid="create-revision"
+        title="지금 초안을 불변 revision으로 고정"
+        type="button"
+        onClick={() => {
+          void props
+            .persist()
+            .then(() => createRevision(props.siteId, props.flowId, props.csrf))
+            .then((result) => props.onMessage(`revision ${result.revisionId}`));
+        }}
+      >
+        Revision
+      </button>
+      <button
+        className={buttonRecipe({ intent: "primary" })}
+        data-testid="deploy-flow"
+        title="저장 → revision → 허브에 배포"
+        type="button"
+        onClick={() => {
+          void props
+            .persist()
+            .then(() => createRevision(props.siteId, props.flowId, props.csrf))
+            .then((revision) =>
+              deployRevision(props.siteId, props.flowId, props.csrf, revision.revisionId),
+            )
+            .then((deployed) => waitDeploy(props, deployed.deploymentId, "배포"));
+        }}
+      >
+        배포
+      </button>
+      {props.deployStatus === "active" ? (
+        <button
+          className={buttonRecipe()}
+          data-testid="deactivate-flow"
+          title="허브에서 이 플로를 끕니다"
+          type="button"
+          onClick={() => {
+            void deactivateFlow(props.siteId, props.flowId, props.csrf)
+              .then((deployed) => waitDeploy(props, deployed.deploymentId, "해제"))
+              .catch((caught: unknown) =>
+                props.onMessage(caught instanceof Error ? caught.message : "해제 실패"),
+              );
+          }}
+        >
+          해제
+        </button>
+      ) : null}
+      {props.previousRevision ? (
+        <button
+          className={buttonRecipe()}
+          data-testid="rollback-flow"
+          title="이전 revision을 다시 배포"
+          type="button"
+          onClick={() => {
+            void deployRevision(props.siteId, props.flowId, props.csrf, props.previousRevision ?? "", {
+              rollback: true,
+              stateEpoch: "reset",
+            }).then((deployed) => waitDeploy(props, deployed.deploymentId, "되돌리기"));
+          }}
+        >
+          되돌리기
+        </button>
+      ) : null}
+    </div>
+    <div className={toolbarGroup}>
     <button
       className={buttonRecipe()}
       data-testid="dry-run-flow"
+      title="기기를 건드리지 않고 초안을 한 번 돌려 봅니다"
       type="button"
       onClick={() => {
         void props
@@ -130,6 +158,7 @@ export const EditorToolbar = (props: {
     <button
       className={buttonRecipe()}
       data-testid="live-run-flow"
+      title="배포된 revision을 실제로 한 번 실행"
       type="button"
       onClick={() => {
         void props
@@ -148,21 +177,16 @@ export const EditorToolbar = (props: {
     >
       실행
     </button>
-    {props.previousRevision ? (
-      <button
-        className={buttonRecipe()}
-        data-testid="rollback-flow"
-        type="button"
-        onClick={() => {
-          void deployRevision(props.siteId, props.flowId, props.csrf, props.previousRevision ?? "", {
-            rollback: true,
-            stateEpoch: "reset",
-          }).then((deployed) => waitDeploy(props, deployed.deploymentId, "되돌리기"));
-        }}
-      >
-        되돌리기
-      </button>
-    ) : null}
+    </div>
+    <label className={toolbarToggle} title="실행마다 원본 payload를 보관합니다 (captureRaw)">
+      <input
+        checked={props.captureRaw}
+        data-testid="flow-capture-raw"
+        type="checkbox"
+        onChange={(event) => props.onCaptureRaw(event.target.checked)}
+      />
+      원본 보관
+    </label>
   </>
 );
 

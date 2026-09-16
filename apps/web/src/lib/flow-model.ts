@@ -3,9 +3,12 @@
  */
 import { officialCatalog, type CatalogNode } from "@howling/contracts";
 import type { WorkflowDefinition } from "@howling/core";
-import { connectEdge, repairEdges, sourcePort } from "./flow-edges.js";
+import { connectEdge, connectEdgeWithBinding, repairEdges, sourcePort } from "./flow-edges.js";
+import { isJoinType, joinNamesOf, outputOf } from "./flow-ports.js";
+import { nodeMeta } from "./node-meta.js";
 
 export { sourcePort } from "./flow-edges.js";
+export { outputOf } from "./flow-ports.js";
 
 type NodeInstance = WorkflowDefinition["nodes"][number];
 
@@ -22,14 +25,7 @@ export const emptyDefinition = (flowId: string): WorkflowDefinition => ({
 });
 
 export const nextNodeId = (type: string, nodes: readonly NodeInstance[]): string => {
-  const base =
-    type === "core.input"
-      ? "input"
-      : type === "analysis.rolling-mean"
-        ? "mean"
-        : type === "core.condition"
-          ? "condition"
-          : "effect";
+  const base = nodeMeta(type).idBase;
   if (!nodes.some((node) => node.id === base)) {
     return base;
   }
@@ -47,6 +43,7 @@ export const wiredInputs = (
   type: string,
   nodes: readonly NodeInstance[],
 ): NodeInstance["inputs"] => {
+  const previous = nodes.at(-1);
   if (type === "analysis.rolling-mean") {
     return {
       value: {
@@ -61,9 +58,16 @@ export const wiredInputs = (
     return {
       left: {
         kind: "output",
-        nodeId: firstNodeId(nodes, "analysis.rolling-mean", "mean"),
-        output: "mean",
+        nodeId: firstNodeId(nodes, "analysis.rolling-mean", previous?.id ?? "mean"),
+        output: nodes.some((node) => node.type === "analysis.rolling-mean")
+          ? "mean"
+          : outputOf(previous?.type ?? ""),
       },
+    };
+  }
+  if (type === "core.map" && previous) {
+    return {
+      value: { kind: "output", nodeId: previous.id, output: outputOf(previous.type) },
     };
   }
   return {};
@@ -123,6 +127,24 @@ export const repairBindings = (definition: WorkflowDefinition): WorkflowDefiniti
   });
 };
 
+const connectJoinSources = (
+  definition: WorkflowDefinition,
+  nodeId: string,
+  names: readonly string[],
+  sources: readonly NodeInstance[],
+): WorkflowDefinition =>
+  names.reduce((current, name, index) => {
+    const source = sources[index];
+    return source
+      ? connectEdgeWithBinding(current, {
+          sourceId: source.id,
+          sourcePort: sourcePort(source.type),
+          targetId: nodeId,
+          targetPort: name,
+        })
+      : current;
+  }, definition);
+
 export const addNode = (
   definition: WorkflowDefinition,
   type: string,
@@ -134,6 +156,18 @@ export const addNode = (
     entryNodeId: definition.nodes[0]?.id ?? nodeId,
     nodes: [...definition.nodes, node],
   };
+  if (isJoinType(type)) {
+    const names = joinNamesOf(node.config);
+    return {
+      nodeId,
+      definition: connectJoinSources(
+        withNode,
+        nodeId,
+        names,
+        definition.nodes.slice(-names.length),
+      ),
+    };
+  }
   const previous = definition.nodes.at(-1);
   return {
     nodeId,
@@ -158,9 +192,32 @@ export const replaceNode = (
   ),
 });
 
+export const setJoinNames = (
+  definition: WorkflowDefinition,
+  nodeId: string,
+  names: readonly string[],
+): WorkflowDefinition => {
+  const inputNames = names.length > 0 ? [...names] : ["a"];
+  const allowed = new Set(inputNames);
+  return repairEdges({
+    ...definition,
+    nodes: definition.nodes.map((node) =>
+      node.id !== nodeId
+        ? node
+        : {
+            ...node,
+            config: { ...node.config, inputNames },
+            inputs: Object.fromEntries(
+              Object.entries(node.inputs).filter(([key]) => allowed.has(key)),
+            ),
+          },
+    ),
+  });
+};
+
 export const defaultPosition = (
   index: number,
-): { x: number; y: number } => ({ x: index * 220, y: 80 });
+): { x: number; y: number } => ({ x: index * 300, y: 80 });
 
 export const draftConnections = (
   definition: WorkflowDefinition,

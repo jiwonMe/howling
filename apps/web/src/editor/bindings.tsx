@@ -1,21 +1,40 @@
 /**
- * 선택 노드 binding·trigger.
+ * 오른쪽 패널: 시험 입력, 자동 실행, 선택한 노드·연결 설정.
  */
-import { originOf, type DeviceSummary, type TriggerBinding } from "@howling/contracts";
-import type { InputBinding, WorkflowDefinition } from "@howling/core";
-import { field, input, label, select } from "../ui/form.css.js";
+import type { DeviceSummary, TriggerBinding } from "@howling/contracts";
+import type { WorkflowDefinition } from "@howling/core";
+import { nodeMeta, portLabel } from "../lib/node-meta.js";
+import { buttonRecipe } from "../ui/button.css.js";
 import { cardTitle } from "../ui/card.css.js";
-import { sidebar } from "../ui/editor.css.js";
-import { EffectFields, type McpToolOption } from "./effect-fields.js";
+import {
+  dangerButton,
+  muted,
+  panelHead,
+  panelMono,
+  panelSection,
+  panelTitleRow,
+  sidebar,
+} from "../ui/editor.css.js";
+import { accent, iconWrap, tone } from "../ui/flow-node.css.js";
+import { iconMark } from "../ui/icon.css.js";
+import { TrashOutline18 } from "../ui/icons/index.js";
+import type { McpToolOption } from "./effect-fields.js";
+import { NodeFields } from "./node-fields.js";
+import { NodeIcon } from "./node-icon.js";
 import { TestPanel } from "./test-panel.js";
+import { TriggerFields } from "./trigger-fields.js";
 
 type NodeInstance = WorkflowDefinition["nodes"][number];
 
 export const Bindings = (props: {
   readonly definition: WorkflowDefinition;
   readonly selectedId: string | undefined;
+  readonly selectedEdgeId: string | undefined;
   readonly triggers: readonly TriggerBinding[];
   readonly onNode: (node: NodeInstance) => void;
+  readonly onDefinition: (definition: WorkflowDefinition) => void;
+  readonly onDeleteNode: (id: string) => void;
+  readonly onDeleteEdge: (id: string) => void;
   readonly onTriggers: (triggers: readonly TriggerBinding[]) => void;
   readonly testPower: string;
   readonly onTestPower: (value: string) => void;
@@ -23,225 +42,84 @@ export const Bindings = (props: {
   readonly devices: readonly DeviceSummary[];
 }) => {
   const node = props.definition.nodes.find((item) => item.id === props.selectedId);
-  const trigger = props.triggers[0];
+  const edge = props.definition.edges.find((item) => item.id === props.selectedEdgeId);
   const inputId = props.definition.nodes.find((item) => item.type === "core.input")?.id ?? "input";
   return (
     <aside className={sidebar}>
       <TestPanel onPower={props.onTestPower} power={props.testPower} />
-      <TriggerFields
-        devices={props.devices}
-        onTriggers={props.onTriggers}
-        trigger={trigger}
-      />
+      <TriggerFields devices={props.devices} onTriggers={props.onTriggers} trigger={props.triggers[0]} />
       {node ? (
-        <NodeFields
-          devices={props.devices}
-          inputId={inputId}
-          node={node}
-          onNode={props.onNode}
-          tools={props.tools}
-        />
+        <section className={panelSection} data-testid="node-panel">
+          <NodeHeader node={node} />
+          <NodeFields
+            definition={props.definition}
+            devices={props.devices}
+            inputId={inputId}
+            node={node}
+            onDefinition={props.onDefinition}
+            onNode={props.onNode}
+            tools={props.tools}
+          />
+          <button
+            className={`${buttonRecipe()} ${dangerButton}`}
+            data-testid="delete-node"
+            type="button"
+            onClick={() => props.onDeleteNode(node.id)}
+          >
+            <TrashOutline18 aria-hidden className={iconMark} />
+            이 노드 삭제
+          </button>
+        </section>
+      ) : edge ? (
+        <section className={panelSection} data-testid="edge-panel">
+          <div className={panelHead}>
+            <h2 className={cardTitle}>연결</h2>
+            <span className={panelMono}>
+              {edge.source.nodeId} · {portLabel(edge.source.port)} → {edge.target.nodeId} ·{" "}
+              {portLabel(edge.target.port)}
+            </span>
+          </div>
+          <p className={muted}>앞 노드가 끝나면 이 선을 따라 다음 노드로 갑니다.</p>
+          <button
+            className={`${buttonRecipe()} ${dangerButton}`}
+            data-testid="delete-edge"
+            type="button"
+            onClick={() => props.onDeleteEdge(edge.id)}
+          >
+            <TrashOutline18 aria-hidden className={iconMark} />
+            이 연결 삭제
+          </button>
+        </section>
       ) : (
-        <p>노드를 선택하세요.</p>
+        <section className={panelSection}>
+          <h2 className={cardTitle}>설정</h2>
+          <p className={muted}>
+            캔버스에서 노드를 누르면 여기서 값을 바꿉니다. 선을 누르면 연결을 지울 수 있습니다.
+            노드는 오른쪽 점을 끌어 다른 노드의 왼쪽 점에 놓으면 이어집니다.
+          </p>
+        </section>
       )}
     </aside>
   );
 };
 
-const TriggerFields = (props: {
-  readonly devices: readonly DeviceSummary[];
-  readonly trigger: TriggerBinding | undefined;
-  readonly onTriggers: (triggers: readonly TriggerBinding[]) => void;
-}) => {
-  const advanced = props.trigger?.kind === "ha.state_changed";
-  const deviceId =
-    props.trigger?.kind === "device.changed" ? String(props.trigger.config.deviceId ?? "") : "";
-  const triggerable = props.devices.filter(
-    (item) =>
-      (item.available || item.id === deviceId) &&
-      ((item.kind === "number" && item.numeric) || item.kind === "binary"),
-  );
+const NodeHeader = (props: { readonly node: NodeInstance }) => {
+  const meta = nodeMeta(props.node.type);
   return (
-    <>
-      <h2 className={cardTitle}>Trigger</h2>
-      {advanced ? (
-        <label className={field}>
-          <span className={label}>HA entity</span>
-          <input
-            className={input}
-            data-testid="trigger-entity"
-            value={String(props.trigger?.config.entityId ?? "")}
-            onChange={(event) =>
-              props.onTriggers([
-                {
-                  id: "ha-power",
-                  kind: "ha.state_changed",
-                  connectionId: "ha",
-                  config: { entityId: event.target.value, inputKey: "power" },
-                },
-              ])
-            }
-          />
-        </label>
-      ) : (
-        <label className={field}>
-          <span className={label}>트리거 기기</span>
-          <select
-            className={select}
-            data-testid="trigger-device"
-            value={deviceId}
-            onChange={(event) => {
-              const nextId = event.target.value;
-              const picked = triggerable.find((item) => item.id === nextId);
-              props.onTriggers([
-                {
-                  id: "device-trigger",
-                  kind: "device.changed",
-                  connectionId: "ha",
-                  config: {
-                    deviceId: nextId,
-                    inputKey: picked?.kind === "binary" ? "value" : "power",
-                  },
-                },
-              ]);
-            }}
-          >
-            <option value="">선택</option>
-            {triggerable.map((item) => (
-              <option key={item.id} value={item.id}>
-                {originOf(item) === "virtual" ? `${item.name} · 가상` : item.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      <label className={field}>
-        <input
-          checked={advanced}
-          type="checkbox"
-          onChange={(event) => {
-            if (event.target.checked) {
-              props.onTriggers([
-                {
-                  id: "ha-power",
-                  kind: "ha.state_changed",
-                  connectionId: "ha",
-                  config: { entityId: "", inputKey: "power" },
-                },
-              ]);
-              return;
-            }
-            props.onTriggers([
-              {
-                id: "device-trigger",
-                kind: "device.changed",
-                connectionId: "ha",
-                config: { deviceId: "", inputKey: "power" },
-              },
-            ]);
-          }}
-        />
-        <span className={label}>고급: HA entity</span>
-      </label>
-    </>
+    <div className={panelHead}>
+      <div className={`${panelTitleRow} ${tone[meta.category]}`}>
+        <span className={iconWrap} style={{ color: accent }}>
+          <NodeIcon type={props.node.type} />
+        </span>
+        <h2 className={cardTitle} style={{ margin: 0 }}>
+          {meta.label}
+        </h2>
+        <span className={panelMono}>{props.node.id}</span>
+      </div>
+      <p className={muted} style={{ margin: 0 }}>
+        {meta.hint}
+      </p>
+      <span className={panelMono}>{props.node.type}</span>
+    </div>
   );
 };
-
-const NodeFields = (props: {
-  readonly devices: readonly DeviceSummary[];
-  readonly inputId: string;
-  readonly node: NodeInstance;
-  readonly onNode: (node: NodeInstance) => void;
-  readonly tools: readonly McpToolOption[];
-}) => {
-  const { node } = props;
-  const setConfig = (key: string, value: number | string) =>
-    props.onNode({ ...node, config: { ...node.config, [key]: value } });
-  const setInput = (key: string, binding: InputBinding) =>
-    props.onNode({ ...node, inputs: { ...node.inputs, [key]: binding } });
-  return (
-    <>
-      <h2 className={cardTitle}>{node.type}</h2>
-      {node.type === "analysis.rolling-mean" ? (
-        <>
-          <NumberField
-            label="windowSize"
-            testId="bind-window"
-            value={Number(node.config.windowSize ?? 5)}
-            onChange={(value) => setConfig("windowSize", value)}
-          />
-          <TextField
-            label="value path"
-            testId="bind-mean-path"
-            value={pathOf(node.inputs.value)}
-            onChange={(value) =>
-              setInput("value", {
-                kind: "output",
-                nodeId: props.inputId,
-                output: "value",
-                path: value === "" ? "/power" : value,
-              })
-            }
-          />
-        </>
-      ) : null}
-      {node.type === "core.condition" ? (
-        <NumberField
-          label="right"
-          testId="bind-right"
-          value={literalNumber(node.inputs.right)}
-          onChange={(value) => setInput("right", { kind: "literal", value })}
-        />
-      ) : null}
-      {node.type === "core.effect" ? (
-        <EffectFields
-          devices={props.devices}
-          node={node}
-          onNode={props.onNode}
-          tools={props.tools}
-        />
-      ) : null}
-    </>
-  );
-};
-
-const TextField = (props: {
-  readonly label: string;
-  readonly testId: string;
-  readonly value: string;
-  readonly onChange: (value: string) => void;
-}) => (
-  <label className={field}>
-    <span className={label}>{props.label}</span>
-    <input
-      className={input}
-      data-testid={props.testId}
-      value={props.value}
-      onChange={(event) => props.onChange(event.target.value)}
-    />
-  </label>
-);
-
-const NumberField = (props: {
-  readonly label: string;
-  readonly testId: string;
-  readonly value: number;
-  readonly onChange: (value: number) => void;
-}) => (
-  <label className={field}>
-    <span className={label}>{props.label}</span>
-    <input
-      className={input}
-      data-testid={props.testId}
-      type="number"
-      value={Number.isFinite(props.value) ? props.value : 0}
-      onChange={(event) => props.onChange(Number(event.target.value))}
-    />
-  </label>
-);
-
-const pathOf = (binding?: InputBinding): string =>
-  binding && "path" in binding && typeof binding.path === "string" ? binding.path : "";
-
-const literalNumber = (binding?: InputBinding): number =>
-  binding && binding.kind === "literal" && typeof binding.value === "number" ? binding.value : 0;

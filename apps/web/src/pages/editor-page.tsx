@@ -13,7 +13,7 @@ import { EditorToolbar } from "../editor/toolbar.js";
 import { loginHref, UnauthorizedError } from "../lib/api.js";
 import { getDevices } from "../lib/devices-api.js";
 import { getConnections, getFlow, saveDraft, saveEditor, type FlowDetail } from "../lib/flows-api.js";
-import { connectEdge } from "../lib/flow-edges.js";
+import { connectEdgeWithBinding } from "../lib/flow-edges.js";
 import {
   addNode,
   draftConnections,
@@ -21,6 +21,7 @@ import {
   repairBindings,
   replaceNode,
 } from "../lib/flow-model.js";
+import { removeEdges, removeNodes } from "../lib/flow-remove.js";
 import { loadStatus } from "../lib/status.js";
 import { buttonRecipe } from "../ui/button.css.js";
 import {
@@ -49,6 +50,7 @@ export const EditorPage = () => {
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [triggers, setTriggers] = useState<readonly TriggerBinding[]>([]);
   const [selectedId, setSelectedId] = useState<string>();
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string>();
   const [message, setMessage] = useState<string>();
   const [deployStatus, setDeployStatus] = useState<string>();
   const [testPower, setTestPower] = useState("1400");
@@ -138,20 +140,38 @@ export const EditorPage = () => {
     return next;
   };
 
+  const deleteNodes = (ids: readonly string[]) => {
+    setDefinition(removeNodes(definition, ids));
+    if (selectedId && ids.includes(selectedId)) {
+      setSelectedId(undefined);
+    }
+  };
+  const deleteEdges = (ids: readonly string[]) => {
+    setDefinition(removeEdges(definition, ids));
+    if (selectedEdgeId && ids.includes(selectedEdgeId)) {
+      setSelectedEdgeId(undefined);
+    }
+  };
+
   return (
     <div className={editorStage}>
       <FlowCanvas
         definition={definition}
+        devices={devices}
         positions={positions}
         selectedId={selectedId}
+        selectedEdgeId={selectedEdgeId}
         onSelect={setSelectedId}
+        onSelectEdge={setSelectedEdgeId}
+        onDeleteNodes={deleteNodes}
+        onDeleteEdges={deleteEdges}
         onPositions={setPositions}
         onConnect={(connection) => {
           if (!connection.source || !connection.target) {
             return;
           }
           setDefinition(
-            connectEdge(definition, {
+            connectEdgeWithBinding(definition, {
               sourceId: connection.source,
               targetId: connection.target,
               ...(connection.sourceHandle ? { sourcePort: connection.sourceHandle } : {}),
@@ -169,7 +189,7 @@ export const EditorPage = () => {
           <div>
             <h1 className={floatTitle}>{detail.name}</h1>
             <p className={subtitle} data-testid="deploy-status">
-              배포 {deployStatus ?? "없음"}
+              배포 {deployStatus ?? "없음"} · 노드 {definition.nodes.length}
             </p>
           </div>
         </header>
@@ -193,9 +213,11 @@ export const EditorPage = () => {
         </div>
       </div>
       <Palette
+        hasInput={definition.nodes.length > 0}
         onAdd={(type) => {
           const added = addNode(definition, type);
           setDefinition(added.definition);
+          setSelectedEdgeId(undefined);
           setSelectedId(added.nodeId);
         }}
       />
@@ -203,10 +225,14 @@ export const EditorPage = () => {
         definition={definition}
         onTestPower={setTestPower}
         selectedId={selectedId}
+        selectedEdgeId={selectedEdgeId}
+        onDeleteNode={(id) => deleteNodes([id])}
+        onDeleteEdge={(id) => deleteEdges([id])}
         testPower={testPower}
         triggers={triggers}
         onTriggers={setTriggers}
         onNode={(node: NodeInstance) => setDefinition(replaceNode(definition, node.id, node))}
+        onDefinition={setDefinition}
         tools={tools}
         devices={devices}
       />
