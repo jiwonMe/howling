@@ -13,6 +13,8 @@ export interface ApiConfig {
   readonly cookieSecure: boolean;
   readonly bootstrapSiteId: string;
   readonly bootstrapSiteName: string;
+  /** 이 이메일로 처음 로그인한 사람만 bootstrap site owner. 나머지는 자기 site를 새로 받는다. */
+  readonly bootstrapOwnerEmail: string;
   readonly bootstrapRuntimeId: string;
   readonly bootstrapRuntimeToken: string;
   /** 웹 번들 경로. 배포에서만 채우고, 있으면 API가 SPA도 낸다. */
@@ -36,6 +38,7 @@ export const loadApiConfig = (
   cookieSecure: env.COOKIE_SECURE === "true",
   bootstrapSiteId: env.BOOTSTRAP_SITE_ID ?? "site_dev",
   bootstrapSiteName: env.BOOTSTRAP_SITE_NAME ?? "Dev Site",
+  bootstrapOwnerEmail: env.BOOTSTRAP_OWNER_EMAIL ?? "owner@howling.test",
   bootstrapRuntimeId: env.BOOTSTRAP_RUNTIME_ID ?? "runtime_dev",
   bootstrapRuntimeToken: env.BOOTSTRAP_RUNTIME_TOKEN ?? "dev-runtime-token",
   webDist: env.WEB_DIST || undefined,

@@ -48,6 +48,8 @@ export const startOidcLogin = async (
 export interface OidcIdentity {
   readonly subject: string;
   readonly email: string | null;
+  /** Google 등은 email_verified를 준다. 없으면 null. */
+  readonly emailVerified: boolean | null;
 }
 
 export const finishOidcLogin = async (
@@ -72,5 +74,7 @@ export const finishOidcLogin = async (
   return {
     subject: claims.sub,
     email: typeof claims.email === "string" ? claims.email : null,
+    emailVerified:
+      typeof claims.email_verified === "boolean" ? claims.email_verified : null,
   };
 };

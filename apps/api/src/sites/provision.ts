@@ -77,3 +77,42 @@ export const attachOwner = async (
     [siteId, userId],
   );
 };
+
+const sameEmail = (left: string | null, right: string): boolean =>
+  left !== null && left.trim().toLowerCase() === right.trim().toLowerCase();
+
+/**
+ * 첫 로그인 = 회원가입. membership이 없으면 site를 하나 만들어 owner로 붙인다.
+ * bootstrap owner 이메일(검증된)만 기존 bootstrap site를 받는다.
+ */
+export const ensureFirstSite = async (
+  pool: pg.Pool,
+  config: ApiConfig,
+  input: {
+    readonly userId: string;
+    readonly email: string | null;
+    readonly emailVerified: boolean | null;
+  },
+): Promise<{ readonly siteId: string; readonly created: boolean }> => {
+  const existing = await pool.query<{ site_id: string }>(
+    `SELECT site_id FROM memberships WHERE user_id = $1 ORDER BY site_id LIMIT 1`,
+    [input.userId],
+  );
+  const joined = existing.rows[0];
+  if (joined) {
+    return { siteId: joined.site_id, created: false };
+  }
+  const isBootstrapOwner =
+    sameEmail(input.email, config.bootstrapOwnerEmail) && input.emailVerified !== false;
+  if (isBootstrapOwner) {
+    await attachOwner(pool, config.bootstrapSiteId, input.userId);
+    return { siteId: config.bootstrapSiteId, created: false };
+  }
+  const siteId = `site_${randomUUID().replace(/-/g, "").slice(0, 16)}`;
+  await pool.query(
+    `INSERT INTO sites (id, name, created_at) VALUES ($1, $2, now())`,
+    [siteId, "Home"],
+  );
+  await attachOwner(pool, siteId, input.userId);
+  return { siteId, created: true };
+};

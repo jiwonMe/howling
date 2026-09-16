@@ -18,7 +18,7 @@ import {
   finishOidcLogin,
   startOidcLogin,
 } from "./oidc.js";
-import { attachOwner, upsertUser } from "../sites/provision.js";
+import { ensureFirstSite, upsertUser } from "../sites/provision.js";
 
 export const registerAuthRoutes = (
   app: FastifyInstance,
@@ -73,7 +73,11 @@ export const registerAuthRoutes = (
       subject: identity.subject,
       email: identity.email,
     });
-    await attachOwner(pool, config.bootstrapSiteId, userId);
+    await ensureFirstSite(pool, config, {
+      userId,
+      email: identity.email,
+      emailVerified: identity.emailVerified,
+    });
     await createSession(pool, config, reply, userId);
     return reply.redirect(`${config.publicOrigin}/`);
   });

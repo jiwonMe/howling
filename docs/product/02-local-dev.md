@@ -39,6 +39,7 @@ OIDC_REDIRECT_URI=http://127.0.0.1:5173/api/v1/auth/callback
 COOKIE_SECURE=false
 BOOTSTRAP_SITE_ID=site_dev
 BOOTSTRAP_SITE_NAME=Dev Site
+BOOTSTRAP_OWNER_EMAIL=owner@howling.test
 BOOTSTRAP_RUNTIME_ID=runtime_dev
 BOOTSTRAP_RUNTIME_TOKEN=dev-runtime-token
 
