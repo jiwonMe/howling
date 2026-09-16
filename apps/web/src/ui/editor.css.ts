@@ -80,77 +80,6 @@ const floatSide = {
   gap: vars.space.sm,
 } as const;
 
-export const palette = style({
-  ...floatSide,
-  left: vars.space.lg,
-  width: "236px",
-});
-
-export const paletteGroup = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: vars.space.xs,
-});
-
-export const paletteGroupTitle = style({
-  fontSize: "11px",
-  fontWeight: vars.weight.medium,
-  letterSpacing: "0.04em",
-  textTransform: "uppercase",
-  color: vars.color.subtle,
-  padding: `${vars.space.xs} 0 0`,
-});
-
-export const paletteItem = style({
-  display: "flex",
-  alignItems: "center",
-  gap: vars.space.sm,
-  width: "100%",
-  textAlign: "left",
-  border: `1px solid transparent`,
-  borderRadius: vars.radius.md,
-  padding: `${vars.space.xs} ${vars.space.sm}`,
-  backgroundColor: "transparent",
-  color: vars.color.text,
-  cursor: "pointer",
-  font: "inherit",
-  selectors: {
-    "&:hover": {
-      backgroundColor: vars.color.hover,
-      borderColor: vars.color.border,
-    },
-    "&:focus-visible": {
-      outline: `2px solid ${vars.color.focus}`,
-      outlineOffset: "1px",
-    },
-  },
-});
-
-export const paletteIcon = style({
-  display: "inline-flex",
-  flexShrink: 0,
-});
-
-export const paletteText = style({
-  display: "flex",
-  flexDirection: "column",
-  minWidth: 0,
-  lineHeight: 1.3,
-});
-
-export const paletteLabel = style({
-  fontSize: vars.font.sm,
-  fontWeight: vars.weight.medium,
-});
-
-export const paletteHint = style({
-  fontSize: "11px",
-  color: vars.color.muted,
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-});
-
 export const panelHead = style({
   display: "flex",
   flexDirection: "column",
@@ -186,7 +115,7 @@ export const emptyHint = style({
   position: "absolute",
   top: 0,
   bottom: 0,
-  left: "284px",
+  left: "248px",
   right: "328px",
   margin: 0,
   display: "flex",
@@ -268,7 +197,7 @@ export const muted = style({
 });
 
 globalStyle(`${editorStage} .react-flow__panel.react-flow__controls.bottom.left`, {
-  left: "268px",
+  left: "232px",
   bottom: "16px",
   margin: 0,
 });

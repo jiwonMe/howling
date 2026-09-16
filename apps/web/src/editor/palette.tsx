@@ -1,65 +1,102 @@
 /**
- * 노드 팔레트. 종류별로 묶고, 이름 아래에 한 줄 설명을 둔다.
+ * 노드 팔레트. 검색으로 좁히고, 한 줄짜리 항목을 누르면 마지막 노드 뒤에 붙는다.
  */
 import { officialCatalog } from "@howling/contracts";
-import { CATEGORY_LABELS, CATEGORY_ORDER, nodeMeta, type NodeCategory } from "../lib/node-meta.js";
-import { cardTitle } from "../ui/card.css.js";
-import {
-  muted,
-  palette,
-  paletteGroup,
-  paletteGroupTitle,
-  paletteHint,
-  paletteIcon,
-  paletteItem,
-  paletteLabel,
-  paletteText,
-} from "../ui/editor.css.js";
+import { useState } from "react";
+import { CATEGORY_LABELS, CATEGORY_ORDER, nodeMeta, type NodeMeta } from "../lib/node-meta.js";
 import { accent, tone } from "../ui/flow-node.css.js";
+import { iconMark } from "../ui/icon.css.js";
+import { MagnifierOutline18, XmarkOutline18 } from "../ui/icons/index.js";
+import * as css from "../ui/palette.css.js";
 import { NodeIcon } from "./node-icon.js";
 
-const grouped = (): readonly { category: NodeCategory; types: readonly string[] }[] =>
-  CATEGORY_ORDER.map((category) => ({
-    category,
-    types: officialCatalog
-      .map((item) => item.type)
-      .filter((type) => nodeMeta(type).category === category),
-  })).filter((group) => group.types.length > 0);
+/** 카탈로그 순서가 아니라 종류 순서(시작 → 동작)로 늘어놓는다. */
+const ordered = (): readonly NodeMeta[] =>
+  CATEGORY_ORDER.flatMap((category) =>
+    officialCatalog
+      .map((item) => nodeMeta(item.type))
+      .filter((meta) => meta.category === category),
+  );
+
+const haystack = (meta: NodeMeta): string =>
+  [meta.label, meta.hint, meta.type, meta.idBase, CATEGORY_LABELS[meta.category]]
+    .join(" ")
+    .toLowerCase();
+
+const matches = (meta: NodeMeta, query: string): boolean => {
+  const needle = query.trim().toLowerCase();
+  if (needle === "") {
+    return true;
+  }
+  const text = haystack(meta);
+  return needle.split(/\s+/).every((word) => text.includes(word));
+};
 
 export const Palette = (props: {
   readonly onAdd: (type: string) => void;
   readonly hasInput: boolean;
-}) => (
-  <aside className={palette} data-testid="palette">
-    <h2 className={cardTitle}>노드 추가</h2>
-    <p className={muted}>
-      {props.hasInput ? "누르면 마지막 노드 뒤에 이어집니다." : "「입력」부터 시작하세요."}
-    </p>
-    {grouped().map((group) => (
-      <div key={group.category} className={paletteGroup}>
-        <span className={paletteGroupTitle}>{CATEGORY_LABELS[group.category]}</span>
-        {group.types.map((type) => {
-          const meta = nodeMeta(type);
-          return (
-            <button
-              key={type}
-              type="button"
-              className={paletteItem}
-              data-testid={`palette-${type}`}
-              title={`${meta.label} — ${meta.hint}`}
-              onClick={() => props.onAdd(type)}
-            >
-              <span className={`${paletteIcon} ${tone[meta.category]}`} style={{ color: accent }}>
-                <NodeIcon type={type} />
-              </span>
-              <span className={paletteText}>
-                <span className={paletteLabel}>{meta.label}</span>
-                <span className={paletteHint}>{meta.hint}</span>
-              </span>
-            </button>
-          );
-        })}
+}) => {
+  const [query, setQuery] = useState("");
+  const visible = ordered().filter((meta) => matches(meta, query));
+  const add = (type: string) => {
+    props.onAdd(type);
+    setQuery("");
+  };
+  return (
+    <aside className={css.palette} data-testid="palette" aria-label="노드 추가">
+      <div className={css.searchRow}>
+        <MagnifierOutline18 aria-hidden className={iconMark} />
+        <input
+          aria-label="노드 검색"
+          className={css.searchInput}
+          data-testid="palette-search"
+          placeholder="노드 검색"
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && query !== "") {
+              event.preventDefault();
+              setQuery("");
+            } else if (event.key === "Enter" && visible[0]) {
+              event.preventDefault();
+              add(visible[0].type);
+            }
+          }}
+        />
+        {query !== "" ? (
+          <button
+            aria-label="검색 지우기"
+            className={css.clearButton}
+            type="button"
+            onClick={() => setQuery("")}
+          >
+            <XmarkOutline18 aria-hidden className={iconMark} />
+          </button>
+        ) : null}
       </div>
-    ))}
-  </aside>
-);
+      <div className={css.list}>
+        {visible.map((meta) => (
+          <button
+            key={meta.type}
+            className={css.item}
+            data-testid={`palette-${meta.type}`}
+            title={`${meta.label} — ${meta.hint}`}
+            type="button"
+            onClick={() => add(meta.type)}
+          >
+            <span className={`${css.itemIcon} ${tone[meta.category]}`} style={{ color: accent }}>
+              <NodeIcon type={meta.type} />
+            </span>
+            <span className={css.itemLabel}>{meta.label}</span>
+            <span className={css.itemTag}>{CATEGORY_LABELS[meta.category]}</span>
+          </button>
+        ))}
+        {visible.length === 0 ? <p className={css.footNote}>「{query.trim()}」에 맞는 노드가 없습니다.</p> : null}
+      </div>
+      {!props.hasInput && visible.length > 0 ? (
+        <p className={css.footNote}>「입력」부터 시작하세요.</p>
+      ) : null}
+    </aside>
+  );
+};

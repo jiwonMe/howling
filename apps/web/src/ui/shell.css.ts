@@ -35,22 +35,42 @@ export const shell = style({
   },
 });
 
-export const rail = style({
-  width: "220px",
-  flexShrink: 0,
-  display: "flex",
-  flexDirection: "column",
-  gap: vars.space.xl,
-  padding: `${vars.space.xl} ${vars.space.lg}`,
-  borderRight: `1px solid ${vars.color.border}`,
-  "@media": {
-    "screen and (max-width: 767px)": {
-      width: "auto",
-      borderRight: "none",
-      borderBottom: `1px solid ${vars.color.border}`,
-      padding: vars.space.lg,
-      gap: vars.space.md,
+export const rail = recipe({
+  base: {
+    width: "220px",
+    flexShrink: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: vars.space.xl,
+    padding: `${vars.space.xl} ${vars.space.lg}`,
+    borderRight: `1px solid ${vars.color.border}`,
+    transition: "width 160ms ease, padding 160ms ease",
+    "@media": {
+      "screen and (max-width: 767px)": {
+        width: "auto",
+        borderRight: "none",
+        borderBottom: `1px solid ${vars.color.border}`,
+        padding: vars.space.lg,
+        gap: vars.space.md,
+      },
     },
+  },
+  variants: {
+    collapsed: {
+      true: {
+        "@media": {
+          "screen and (min-width: 768px)": {
+            width: "64px",
+            padding: `${vars.space.xl} ${vars.space.sm}`,
+            alignItems: "stretch",
+          },
+        },
+      },
+      false: {},
+    },
+  },
+  defaultVariants: {
+    collapsed: false,
   },
 });
 

@@ -32,6 +32,7 @@ test("builds a mean flow and turns on the HA helper once", async ({ page, reques
   await page.getByTestId("palette-analysis.rolling-mean").click();
   await page.getByTestId("palette-core.condition").click();
   await page.getByTestId("palette-core.effect").click();
+  await page.getByTestId("flow-settings").click();
 
   await expect
     .poll(async () => page.getByTestId("trigger-device").locator("option", { hasText: "Test Power" }).count(), {

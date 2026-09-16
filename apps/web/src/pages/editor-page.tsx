@@ -226,6 +226,10 @@ export const EditorPage = () => {
         onTestPower={setTestPower}
         selectedId={selectedId}
         selectedEdgeId={selectedEdgeId}
+        onClearSelection={() => {
+          setSelectedId(undefined);
+          setSelectedEdgeId(undefined);
+        }}
         onDeleteNode={(id) => deleteNodes([id])}
         onDeleteEdge={(id) => deleteEdges([id])}
         testPower={testPower}

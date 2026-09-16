@@ -28,6 +28,7 @@ test("tests a mean flow without calling Home Assistant", async ({ page, request 
   await page.getByTestId("palette-analysis.rolling-mean").click();
   await page.getByTestId("palette-core.condition").click();
   await page.getByTestId("palette-core.effect").click();
+  await page.getByTestId("flow-settings").click();
   await expect
     .poll(async () => page.getByTestId("trigger-device").locator("option", { hasText: "Test Power" }).count(), {
       timeout: 60_000,

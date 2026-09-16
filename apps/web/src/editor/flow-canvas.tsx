@@ -2,6 +2,7 @@
  * React Flow 캔버스. 선에는 포트 이름과 화살표, 빈 캔버스에는 시작 안내.
  */
 import {
+  applyNodeChanges,
   Background,
   Controls,
   MarkerType,
@@ -11,11 +12,13 @@ import {
   type Edge,
   type FitViewOptions,
   type Node,
+  type NodeChange,
   type NodeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { DeviceSummary } from "@howling/contracts";
 import type { WorkflowDefinition } from "@howling/core";
+import { useEffect, useMemo, useState } from "react";
 import { defaultPosition } from "../lib/flow-model.js";
 import { portLabel } from "../lib/node-meta.js";
 import { summarizeNode } from "../lib/node-summary.js";
@@ -31,11 +34,71 @@ const fitViewOptions: FitViewOptions = {
   maxZoom: 1,
 };
 
+type CanvasNode = Node<{
+  type: string;
+  inputNames: string[];
+  summary: string;
+  incomplete: boolean;
+}>;
+
 const edgeLabel = (edge: WorkflowDefinition["edges"][number], joinTarget: boolean): string | undefined => {
   if (edge.source.port === "true" || edge.source.port === "false") {
     return portLabel(edge.source.port);
   }
   return joinTarget ? edge.target.port : undefined;
+};
+
+const positionsAfterDrag = (
+  changes: readonly NodeChange[],
+  current: Record<string, { x: number; y: number }>,
+): Record<string, { x: number; y: number }> | undefined => {
+  let next: Record<string, { x: number; y: number }> | undefined;
+  for (const change of changes) {
+    if (change.type !== "position" || change.position === undefined) {
+      continue;
+    }
+    next ??= { ...current };
+    next[change.id] = change.position;
+  }
+  return next;
+};
+
+const toCanvasNodes = (
+  definition: WorkflowDefinition,
+  devices: readonly DeviceSummary[],
+  positions: Record<string, { x: number; y: number }>,
+  selectedId: string | undefined,
+  previous: readonly CanvasNode[],
+): CanvasNode[] => {
+  const byId = new Map(previous.map((node) => [node.id, node]));
+  return definition.nodes.map((node, index) => {
+    const prev = byId.get(node.id);
+    const summary = summarizeNode(node, devices);
+    const inputNames = Array.isArray(node.config.inputNames)
+      ? node.config.inputNames.filter((item): item is string => typeof item === "string")
+      : [];
+    const measured =
+      prev?.measured?.width !== undefined && prev.measured.height !== undefined
+        ? { width: prev.measured.width, height: prev.measured.height }
+        : undefined;
+    return {
+      id: node.id,
+      type: "howling",
+      position: prev?.position ?? positions[node.id] ?? defaultPosition(index),
+      selected: selectedId === node.id,
+      initialWidth: 224,
+      initialHeight: 56,
+      ...(prev?.width !== undefined ? { width: prev.width } : {}),
+      ...(prev?.height !== undefined ? { height: prev.height } : {}),
+      ...(measured ? { measured } : {}),
+      data: {
+        type: node.type,
+        inputNames,
+        summary: summary.text,
+        incomplete: summary.incomplete,
+      },
+    };
+  });
 };
 
 export const FlowCanvas = (props: {
@@ -51,37 +114,38 @@ export const FlowCanvas = (props: {
   readonly onDeleteNodes: (ids: readonly string[]) => void;
   readonly onDeleteEdges: (ids: readonly string[]) => void;
 }) => {
-  const joinIds = new Set(
-    props.definition.nodes
-      .filter((node) => node.type === "core.all" || node.type === "core.any")
-      .map((node) => node.id),
+  const [nodes, setNodes] = useState<CanvasNode[]>(() =>
+    toCanvasNodes(props.definition, props.devices, props.positions, props.selectedId, []),
   );
-  const nodes: Node[] = props.definition.nodes.map((node, index) => {
-    const summary = summarizeNode(node, props.devices);
-    return {
-      id: node.id,
-      type: "howling",
-      position: props.positions[node.id] ?? defaultPosition(index),
-      selected: props.selectedId === node.id,
-      data: {
-        type: node.type,
-        inputNames: Array.isArray(node.config.inputNames) ? node.config.inputNames : [],
-        summary: summary.text,
-        incomplete: summary.incomplete,
-      },
-    };
-  });
-  const edges: Edge[] = props.definition.edges.map((edge) => ({
-    id: edge.id,
-    source: edge.source.nodeId,
-    target: edge.target.nodeId,
-    sourceHandle: edge.source.port,
-    targetHandle: edge.target.port,
-    type: "smoothstep",
-    selected: props.selectedEdgeId === edge.id,
-    label: edgeLabel(edge, joinIds.has(edge.target.nodeId)),
-    markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
-  }));
+  useEffect(() => {
+    setNodes((previous) =>
+      toCanvasNodes(props.definition, props.devices, props.positions, props.selectedId, previous),
+    );
+  }, [props.definition, props.devices, props.selectedId]);
+  const joinIds = useMemo(
+    () =>
+      new Set(
+        props.definition.nodes
+          .filter((node) => node.type === "core.all" || node.type === "core.any")
+          .map((node) => node.id),
+      ),
+    [props.definition.nodes],
+  );
+  const edges: Edge[] = useMemo(
+    () =>
+      props.definition.edges.map((edge) => ({
+        id: edge.id,
+        source: edge.source.nodeId,
+        target: edge.target.nodeId,
+        sourceHandle: edge.source.port,
+        targetHandle: edge.target.port,
+        type: "smoothstep",
+        selected: props.selectedEdgeId === edge.id,
+        label: edgeLabel(edge, joinIds.has(edge.target.nodeId)),
+        markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16 },
+      })),
+    [props.definition.edges, props.selectedEdgeId, joinIds],
+  );
   return (
     <div className={canvasWrap} data-testid="canvas">
       {props.definition.nodes.length === 0 ? (
@@ -107,9 +171,13 @@ export const FlowCanvas = (props: {
             props.onSelect(undefined);
             props.onSelectEdge(undefined);
           }}
-          onNodeDragStop={(_event, node) =>
-            props.onPositions({ ...props.positions, [node.id]: node.position })
-          }
+          onNodesChange={(changes) => {
+            setNodes((current) => applyNodeChanges(changes, current));
+            const next = positionsAfterDrag(changes, props.positions);
+            if (next) {
+              props.onPositions(next);
+            }
+          }}
           onConnect={(connection) => props.onConnect(connection)}
           onNodesDelete={(deleted) => props.onDeleteNodes(deleted.map((node) => node.id))}
           onEdgesDelete={(deleted) => props.onDeleteEdges(deleted.map((edge) => edge.id))}

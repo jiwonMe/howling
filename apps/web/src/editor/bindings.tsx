@@ -1,5 +1,5 @@
 /**
- * 오른쪽 패널: 시험 입력, 자동 실행, 선택한 노드·연결 설정.
+ * 오른쪽 패널. 선택 없으면 플로 설정, 있으면 그 노드·연결만.
  */
 import type { DeviceSummary, TriggerBinding } from "@howling/contracts";
 import type { WorkflowDefinition } from "@howling/core";
@@ -33,6 +33,7 @@ export const Bindings = (props: {
   readonly triggers: readonly TriggerBinding[];
   readonly onNode: (node: NodeInstance) => void;
   readonly onDefinition: (definition: WorkflowDefinition) => void;
+  readonly onClearSelection: () => void;
   readonly onDeleteNode: (id: string) => void;
   readonly onDeleteEdge: (id: string) => void;
   readonly onTriggers: (triggers: readonly TriggerBinding[]) => void;
@@ -46,10 +47,16 @@ export const Bindings = (props: {
   const inputId = props.definition.nodes.find((item) => item.type === "core.input")?.id ?? "input";
   return (
     <aside className={sidebar}>
-      <TestPanel onPower={props.onTestPower} power={props.testPower} />
-      <TriggerFields devices={props.devices} onTriggers={props.onTriggers} trigger={props.triggers[0]} />
       {node ? (
         <section className={panelSection} data-testid="node-panel">
+          <button
+            className={buttonRecipe()}
+            data-testid="flow-settings"
+            type="button"
+            onClick={props.onClearSelection}
+          >
+            플로 설정
+          </button>
           <NodeHeader node={node} />
           <NodeFields
             definition={props.definition}
@@ -72,6 +79,14 @@ export const Bindings = (props: {
         </section>
       ) : edge ? (
         <section className={panelSection} data-testid="edge-panel">
+          <button
+            className={buttonRecipe()}
+            data-testid="flow-settings"
+            type="button"
+            onClick={props.onClearSelection}
+          >
+            플로 설정
+          </button>
           <div className={panelHead}>
             <h2 className={cardTitle}>연결</h2>
             <span className={panelMono}>
@@ -91,13 +106,13 @@ export const Bindings = (props: {
           </button>
         </section>
       ) : (
-        <section className={panelSection}>
-          <h2 className={cardTitle}>설정</h2>
+        <>
+          <TestPanel onPower={props.onTestPower} power={props.testPower} />
+          <TriggerFields devices={props.devices} onTriggers={props.onTriggers} trigger={props.triggers[0]} />
           <p className={muted}>
-            캔버스에서 노드를 누르면 여기서 값을 바꿉니다. 선을 누르면 연결을 지울 수 있습니다.
-            노드는 오른쪽 점을 끌어 다른 노드의 왼쪽 점에 놓으면 이어집니다.
+            캔버스에서 노드를 누르면 그 노드만 설정합니다. 선을 누르면 연결을 지울 수 있습니다.
           </p>
-        </section>
+        </>
       )}
     </aside>
   );

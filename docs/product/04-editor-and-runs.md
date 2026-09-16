@@ -4,10 +4,10 @@
 
 ## 화면 배치
 
-- 왼쪽: 노드 팔레트. 종류별(시작·계산·분기·합류·시간·동작)로 묶고 우리말 이름과 한 줄 설명을 보입니다. 화면 이름 ↔ catalog type: 입력 `core.input`, 이동 평균 `analysis.rolling-mean`, 값 묶기 `core.map`, 조건 `core.condition`, 모두 기다림 `core.all`, 먼저 온 것 `core.any`, 대기 `core.delay`, 동작 `core.effect`. 표시 정보는 `apps/web/src/lib/node-meta.ts`에만 있고 catalog 계약은 그대로입니다
+- 왼쪽: 노드 팔레트(200px). 맨 위 검색 칸에 이름·설명·종류·type 아무 것이나 치면 목록이 좁혀지고, `Enter`는 첫 항목을 추가, `Escape`는 검색을 지웁니다. 항목은 아이콘·이름·종류 한 줄이고 한 줄 설명은 마우스를 올리면(title) 보입니다. 종류 순서는 시작·계산·분기·합류·시간·동작. 화면 이름 ↔ catalog type: 입력 `core.input`, 이동 평균 `analysis.rolling-mean`, 값 묶기 `core.map`, 조건 `core.condition`, 모두 기다림 `core.all`, 먼저 온 것 `core.any`, 대기 `core.delay`, 동작 `core.effect`. 표시 정보는 `apps/web/src/lib/node-meta.ts`에만 있고 catalog 계약은 그대로입니다
 - 가운데: React Flow. 카드마다 아이콘·이름·id, 두 번째 줄에 설정 요약(`mean.mean > 1000`, `Test Alert · 켜기`, `1초 기다림`…)이 보이고, 빠진 설정은 빨간 글씨와 점선 테두리로 표시합니다. 일반 노드는 이전 노드와 자동으로 이어집니다. Condition은 오른쪽에 「참」「거짓」 두 포트, All/Any는 왼쪽에 이름 포트가 나오고 선에도 포트 이름이 붙습니다
 - 삭제: 노드나 선을 누르고 `Delete`/`Backspace`, 또는 오른쪽 패널의 「이 노드 삭제」「이 연결 삭제」. 노드를 지우면 그 노드를 가리키던 binding과 선도 함께 지웁니다
-- 오른쪽: 시험 입력 값, 자동 실행(기기 trigger), 선택한 노드의 설정. 「고급: HA entity」는 예전 `entity_id` 입력. 아무것도 선택하지 않으면 사용법 안내
+- 오른쪽: 노드를 고르면 그 노드만. 캔버스를 비우거나 「플로 설정」을 누르면 시험 입력·자동 실행(기기 trigger). 「고급: HA entity」는 예전 `entity_id` 입력
 - 위: 저장·검증 | Revision·배포·해제·되돌리기 | 시험·실행 | 원본 보관(`captureRaw`). 버튼마다 툴팁이 있습니다
 - Effect adapter는 기본 `device` / `action`. `homeassistant`는 「고급 (HA 서비스)」, `mcp`면 로컬에서 발견한 connection·tool을 고른다
 - Map은 필드 이름과 값 출처. Delay는 `durationMs`(ms). All/Any는 `inputNames`와 이름별 값. Condition은 「비교 방법」(`operator`)과 「비교값」(`right`)
