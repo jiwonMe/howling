@@ -17,6 +17,7 @@ import { registerSiteRoutes } from "./sites/routes.js";
 import { registerTokenRoutes } from "./tokens/routes.js";
 import { registerDataRoutes } from "./data/routes.js";
 import { registerDeviceRoutes } from "./devices/routes.js";
+import { registerWebStatic } from "./web/static.js";
 
 export const createApiApp = async (
   config: ApiConfig,
@@ -36,5 +37,6 @@ export const createApiApp = async (
   registerMcpRoutes(app, pool);
   registerMcpOauthRoutes(app);
   registerRuntimeGateway(app, pool);
+  await registerWebStatic(app, config.webDist);
   return app;
 };

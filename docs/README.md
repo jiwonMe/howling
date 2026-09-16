@@ -21,6 +21,7 @@ Howling은 Home Assistant를 이용한 시각적 자동화 플랫폼입니다. �
 8. [MCP](./product/07-mcp.md)
 9. [관측·원본·설치](./product/08-analytics-and-data.md)
 10. [기기](./product/09-devices.md)
+11. [Railway 배포](./product/10-deploy-railway.md) — `app.howling.life`, `auth.howling.life`, GitHub 자동 배포
 
 ## Core 자습서
 
