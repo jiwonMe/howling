@@ -1,16 +1,17 @@
 # Railway 배포
 
-클라우드는 Railway 한 프로젝트(`howling`)에 세 서비스로 올린다. runtime은 집(HA OS 앱·Docker)에서 돌고 pairing으로 붙는다.
+클라우드는 Railway 한 프로젝트(`howling`)에 올린다. runtime은 집(HA OS 앱·Docker)에서 돌고 pairing으로 붙는다.
 
 | 서비스 | 소스 | 도메인 | 역할 |
 | --- | --- | --- | --- |
 | `api` | `infra/railway/Dockerfile.api` | `app.howling.life` | API + 웹 번들(같은 origin) + runtime WebSocket + MCP |
 | `Postgres` | Railway 템플릿 | 비공개 | `${{Postgres.DATABASE_URL}}` |
-| `oidc` (선택) | `infra/railway/Dockerfile.oidc` | `auth.howling.life` | 한 계정 테스트 issuer. Google을 쓰면 필요 없다 |
+| `logto` | Docker 이미지 `svhd/logto:latest` | `auth.howling.life` (3001), 콘솔은 Railway 도메인 (3002) | 로그인·회원가입을 맡는 OIDC issuer |
+| `Postgres-0dIj` | Railway 템플릿 | 비공개 | Logto 전용 DB. Howling과 테이블 이름(`users`)이 겹쳐서 따로 둔다 |
 
-로그인은 Google OIDC다. 회원가입은 따로 없다. **Google로 처음 로그인하면 가입**이고, 그 사람 전용 site(`Home`)가 만들어져 owner가 된다. `BOOTSTRAP_OWNER_EMAIL`과 같은(검증된) 이메일만 기존 bootstrap site를 받는다.
+로그인은 [Logto](https://logto.io)가 맡는다. 회원가입 화면·Google 로그인·이메일 인증은 전부 Logto 쪽 설정이고, Howling API는 OIDC client로 `sub`·`email`·`email_verified`만 받는다. **처음 로그인하면 가입**이고, 그 사람 전용 site(`Home`)가 만들어져 owner가 된다. `BOOTSTRAP_OWNER_EMAIL`과 같은(검증된) 이메일만 기존 bootstrap site를 받는다.
 
-GitHub `jiwonMe/howling`의 `main`에 push하면 watch pattern에 맞는 서비스만 다시 빌드된다.
+GitHub `jiwonMe/howling`의 `main`에 push하면 `api`가 다시 빌드된다. `logto`는 이미지라 저장소와 무관하다.
 
 ## 웹을 API가 내는 이유
 
@@ -28,41 +29,55 @@ GitHub `jiwonMe/howling`의 `main`에 push하면 watch pattern에 맞는 서비�
 | `WEB_DIST` | `/app/web` |
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
 | `PUBLIC_ORIGIN` | `https://app.howling.life` |
-| `OIDC_ISSUER` | `https://accounts.google.com` |
-| `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | Google Cloud OAuth 클라이언트. secret은 sealed |
+| `OIDC_ISSUER` | `https://auth.howling.life/oidc` (Logto issuer는 `/oidc`가 붙는다) |
+| `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | Logto 콘솔 → Applications → `Howling`의 App ID / App Secret. secret은 sealed |
 | `OIDC_REDIRECT_URI` | `https://app.howling.life/api/v1/auth/callback` |
 | `COOKIE_SECURE` | `true` |
 | `BOOTSTRAP_SITE_ID` / `BOOTSTRAP_SITE_NAME` | `site_home` / `Home` |
-| `BOOTSTRAP_OWNER_EMAIL` | 운영자 Google 이메일 |
+| `BOOTSTRAP_OWNER_EMAIL` | 운영자 이메일 |
 | `BOOTSTRAP_RUNTIME_TOKEN` | 비움. runtime은 pairing으로 붙는다 |
 
-### Google OAuth 클라이언트
-
-1. [Google Cloud Console → APIs & Services → Credentials](https://console.cloud.google.com/apis/credentials)에서 **OAuth client ID → Web application**.
-2. Authorized redirect URI에 `https://app.howling.life/api/v1/auth/callback`. 로컬에서도 Google을 쓰려면 `http://127.0.0.1:5173/api/v1/auth/callback`도 추가.
-3. OAuth consent screen이 Testing 상태면 Test users에 넣은 계정만 로그인된다. 누구나 가입하게 하려면 **Publish app**(External).
-4. 발급된 client id/secret을 `api`에 넣는다.
-
-```bash
-railway variable set OIDC_ISSUER=https://accounts.google.com OIDC_CLIENT_ID=<client-id>.apps.googleusercontent.com --service api
-printf "%s" "<client-secret>" | railway variable set OIDC_CLIENT_SECRET --stdin --service api
-```
-
-API는 `openid email` scope만 요청하고 `sub`·`email`·`email_verified`만 저장한다.
-
-`oidc` (테스트 issuer를 쓸 때만)
+`logto`
 
 | 키 | 값 |
 | --- | --- |
-| `PORT`, `OIDC_LISTEN` | `8081`, `0.0.0.0:8081` |
-| `OIDC_ISSUER` | `https://auth.howling.life` |
-| `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | `api`와 같은 값 |
-| `OIDC_REDIRECT_URI` | `https://app.howling.life/api/v1/auth/callback` |
-| `OIDC_TEST_EMAIL` / `OIDC_TEST_PASSWORD` | 로그인 계정. sealed |
+| `DB_URL` | `${{Postgres-0dIj.DATABASE_URL}}` |
+| `PORT` / `ADMIN_PORT` | `3001` / `3002` |
+| `ENDPOINT` | `https://auth.howling.life` |
+| `ADMIN_ENDPOINT` | `https://logto-production-c863.up.railway.app` |
+| `TRUST_PROXY_HEADER` | `1` |
+
+시작 명령은 `sh -c "npm run cli db seed -- --swe; npm run alteration deploy latest; npm start"`, healthcheck는 `/api/status`. 도메인은 두 개다: 커스텀 `auth.howling.life`는 3001(issuer·로그인 화면·Management API), Railway 생성 도메인은 3002(Admin Console).
+
+### Logto 콘솔에서 할 일
+
+1. **Applications → Create app without framework → Traditional Web**, 이름 `Howling`. Redirect URI에 `https://app.howling.life/api/v1/auth/callback`. App ID/Secret을 `api`에 넣는다.
+2. **Connectors → Social connectors → Google**. [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials)에서 OAuth client(Web application)를 만들고 Authorized redirect URI에 Logto가 알려주는 `https://auth.howling.life/callback/<connector-id>`를 넣는다. client id/secret을 커넥터에 저장.
+3. **Sign-in & account → Sign-up and sign-in**. Sign-up identifier를 Email로 두거나, 소셜만 쓰려면 "Not applicable"로 두고 Social sign-in에 Google을 추가한다. 이메일 인증 코드를 쓰려면 Email connector도 하나 붙여야 한다.
+
+```bash
+railway variable set OIDC_ISSUER=https://auth.howling.life/oidc OIDC_CLIENT_ID=<app-id> --service api
+printf "%s" "<app-secret>" | railway variable set OIDC_CLIENT_SECRET --stdin --service api
+```
+
+API는 `openid email` scope만 요청한다. Logto는 이 scope로 `email`·`email_verified`를 id_token에 넣는다.
+
+### 로컬 개발
+
+로컬은 그대로 `infra/oidc`의 한 계정 테스트 issuer(`pnpm dev`가 띄움)를 쓴다. Logto를 로컬에서 쓰고 싶으면 `.env`의 `OIDC_ISSUER=https://auth.howling.life/oidc`와 App ID/Secret을 넣고, Logto 앱의 Redirect URI에 `http://127.0.0.1:5173/api/v1/auth/callback`을 추가한다.
 
 ## DNS
 
-`howling.life` 네임서버(hosting.co.kr)에 CNAME과 소유 확인 TXT를 넣는다(`app`, 테스트 issuer를 쓰면 `auth`도). 값은 `railway domain list --service api --json`으로 다시 볼 수 있다. TXT가 확인되기 전에는 404가 난다.
+`howling.life` 네임서버(hosting.co.kr)에 넣는 레코드. 값은 `railway domain status <도메인> --service <서비스> --json`으로 다시 볼 수 있다.
+
+| 타입 | 이름 | 값 |
+| --- | --- | --- |
+| CNAME | `app` | `railway domain status app.howling.life --service api`의 `requiredValue` |
+| TXT | `_railway-verify.app` | 같은 명령의 `verificationToken` |
+| CNAME | `auth` | `railway domain status auth.howling.life --service logto`의 `requiredValue` |
+| TXT | `_railway-verify.auth` | 같은 명령의 `verificationToken` |
+
+TXT가 확인되고 인증서가 나오기 전에는 404·TLS 오류가 난다. hosting.co.kr 존의 negative TTL이 180초라 새 레코드가 공개 resolver에 보이기까지 몇 분 걸린다.
 
 ## 집 runtime
 
@@ -78,12 +93,12 @@ RUNTIME_API_HTTP=https://app.howling.life
 ```bash
 railway deployment list --service api --json | jq '.[0].status'
 curl -s https://app.howling.life/health
-curl -s https://auth.howling.life/.well-known/openid-configuration | jq .issuer
+curl -s https://auth.howling.life/oidc/.well-known/openid-configuration | jq .issuer
+curl -sI https://app.howling.life/api/v1/auth/login | grep -i '^location'   # auth.howling.life/oidc/auth 로 302
 ```
 
-이미지는 로컬에서도 같은 Dockerfile로 만들 수 있다.
+`api` 이미지는 로컬에서도 같은 Dockerfile로 만들 수 있다.
 
 ```bash
 docker build -f infra/railway/Dockerfile.api -t howling-api:local .
-docker build -f infra/railway/Dockerfile.oidc -t howling-oidc:local .
 ```
