@@ -14,6 +14,7 @@ export { LightSwitchOutline18 } from "./LightSwitchOutline18.js";
 export { MagnifierOutline18 } from "./MagnifierOutline18.js";
 export { MergeOutline18 } from "./MergeOutline18.js";
 export { NodesOutline18 } from "./NodesOutline18.js";
+export { PenOutline18 } from "./PenOutline18.js";
 export { Plug2Outline18 } from "./Plug2Outline18.js";
 export { PlusOutline18 } from "./PlusOutline18.js";
 export { RectLogoutOutline18 } from "./RectLogoutOutline18.js";

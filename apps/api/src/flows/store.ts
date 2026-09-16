@@ -75,6 +75,20 @@ export const getFlow = async (pool: pg.Pool, siteId: string, flowId: string) => 
   };
 };
 
+/** 이름만 바꾼다. 초안 version은 그대로라 열어 둔 편집기와 충돌하지 않는다. */
+export const renameFlow = async (
+  pool: pg.Pool,
+  siteId: string,
+  flowId: string,
+  name: string,
+): Promise<"ok" | "missing"> => {
+  const result = await pool.query(
+    `UPDATE flow_drafts SET name = $3, updated_at = now() WHERE id = $1 AND site_id = $2`,
+    [flowId, siteId, name],
+  );
+  return (result.rowCount ?? 0) === 1 ? "ok" : "missing";
+};
+
 export const saveDraft = async (
   pool: pg.Pool,
   input: {

@@ -46,7 +46,7 @@ export const FlowsPage = () => {
       <header className={header}>
         <div>
           <h1 className={title}>플로</h1>
-          <p className={caption}>초안과 배포 상태. 목록에서 지울 수 있습니다.</p>
+          <p className={caption}>초안과 배포 상태. 이름 옆 연필로 바꾸고, 목록에서 지울 수 있습니다.</p>
         </div>
         <button
           className={buttonRecipe({ intent: "primary" })}
@@ -69,6 +69,9 @@ export const FlowsPage = () => {
           flows={flows}
           siteId={siteId}
           onRemoved={(flowId) => setFlows((rows) => rows.filter((row) => row.id !== flowId))}
+          onRenamed={(flowId, name) =>
+            setFlows((rows) => rows.map((row) => (row.id === flowId ? { ...row, name } : row)))
+          }
         />
       </section>
     </div>

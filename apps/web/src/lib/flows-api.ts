@@ -56,6 +56,13 @@ export const createFlow = (siteId: string, name: string, csrf: string) =>
     body: JSON.stringify({ name }),
   });
 
+export const renameFlow = (siteId: string, flowId: string, csrf: string, name: string) =>
+  ask<{ flowId: string; name: string }>(`/api/v1/sites/${siteId}/flows/${flowId}`, {
+    method: "PATCH",
+    csrf,
+    body: JSON.stringify({ name }),
+  });
+
 export const getFlow = (siteId: string, flowId: string) =>
   ask<FlowDetail>(`/api/v1/sites/${siteId}/flows/${flowId}`);
 

@@ -44,6 +44,7 @@
 | --- | --- |
 | `GET/POST /flows` | 목록·생성 |
 | `GET /flows/:flowId` | 초안 + 배포 상태 |
+| `PATCH /flows/:flowId` | 이름 변경 `{ name }`(1–80자, 양끝 공백 제거). 초안 version은 그대로 |
 | `DELETE /flows/:flowId` | 초안 삭제. 활성이면 해제 후 삭제 |
 | `PUT .../draft`, `PUT .../editor` | 기대 `version`. 충돌이면 409 |
 | `POST .../validate` | 공식 catalog + core compile |

@@ -27,6 +27,10 @@ export const editorSaveSchema = z.object({
   }),
 });
 
+export const flowRenameSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+});
+
 export const startRunRequestSchema = z.object({
   input: z.unknown(),
   mode: z.enum(["auto", "manual"]).default("auto"),
@@ -94,6 +98,7 @@ export const runSummarySchema = z.object({
 
 export type DraftSave = z.infer<typeof draftSaveSchema>;
 export type EditorSave = z.infer<typeof editorSaveSchema>;
+export type FlowRename = z.infer<typeof flowRenameSchema>;
 export type RunSummary = z.infer<typeof runSummarySchema>;
 export type EffectFixture = z.infer<typeof effectFixtureSchema>;
 export type TestSessionRequest = z.infer<typeof testSessionRequestSchema>;

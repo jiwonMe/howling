@@ -12,7 +12,14 @@ import { Palette } from "../editor/palette.js";
 import { EditorToolbar } from "../editor/toolbar.js";
 import { loginHref, UnauthorizedError } from "../lib/api.js";
 import { getDevices } from "../lib/devices-api.js";
-import { getConnections, getFlow, saveDraft, saveEditor, type FlowDetail } from "../lib/flows-api.js";
+import {
+  getConnections,
+  getFlow,
+  renameFlow,
+  saveDraft,
+  saveEditor,
+  type FlowDetail,
+} from "../lib/flows-api.js";
 import { connectEdgeWithBinding } from "../lib/flow-edges.js";
 import {
   addNode,
@@ -36,6 +43,7 @@ import {
 import { errorText } from "../ui/form.css.js";
 import { iconMark } from "../ui/icon.css.js";
 import { ArrowLeftOutline18 } from "../ui/icons/index.js";
+import { InlineRename } from "../ui/inline-rename.js";
 import { page, subtitle } from "../ui/layout.css.js";
 
 type NodeInstance = WorkflowDefinition["nodes"][number];
@@ -187,7 +195,20 @@ export const EditorPage = () => {
             목록
           </Link>
           <div>
-            <h1 className={floatTitle}>{detail.name}</h1>
+            <InlineRename
+              display={
+                <h1 className={floatTitle} data-testid="flow-title">
+                  {detail.name}
+                </h1>
+              }
+              size="title"
+              testId="flow-title"
+              value={detail.name}
+              onSave={async (name) => {
+                const renamed = await renameFlow(siteId, flowId, csrf, name);
+                setDetail({ ...detail, name: renamed.name });
+              }}
+            />
             <p className={subtitle} data-testid="deploy-status">
               배포 {deployStatus ?? "없음"} · 노드 {definition.nodes.length}
             </p>

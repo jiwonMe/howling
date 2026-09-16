@@ -4,9 +4,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { loginHref, UnauthorizedError } from "../lib/api.js";
-import { deleteFlow, type FlowListItem } from "../lib/flows-api.js";
+import { deleteFlow, renameFlow, type FlowListItem } from "../lib/flows-api.js";
 import { buttonRecipe } from "../ui/button.css.js";
 import { errorText } from "../ui/form.css.js";
+import { InlineRename } from "../ui/inline-rename.js";
 import {
   empty,
   tableActions,
@@ -24,6 +25,7 @@ export const FlowTable = (props: {
   readonly siteId: string;
   readonly csrf: string;
   readonly onRemoved: (flowId: string) => void;
+  readonly onRenamed: (flowId: string, name: string) => void;
 }) => {
   const [pendingId, setPendingId] = useState<string>();
   const [busyId, setBusyId] = useState<string>();
@@ -78,9 +80,20 @@ export const FlowTable = (props: {
           {props.flows.map((flow) => (
             <tr data-testid={`flow-${flow.id}`} key={flow.id}>
               <td className={tableCell}>
-                <Link className={tableLink} to={`/flows/${flow.id}`}>
-                  {flow.name}
-                </Link>
+                <InlineRename
+                  display={
+                    <Link className={tableLink} to={`/flows/${flow.id}`}>
+                      {flow.name}
+                    </Link>
+                  }
+                  size="row"
+                  testId={`flow-name-${flow.id}`}
+                  value={flow.name}
+                  onSave={async (name) => {
+                    const renamed = await renameFlow(props.siteId, flow.id, props.csrf, name);
+                    props.onRenamed(flow.id, renamed.name);
+                  }}
+                />
               </td>
               <td className={`${tableCell} ${tableMono}`}>{flow.revision_id ?? "없음"}</td>
               <td className={tableCell}>{flow.deploy_status ?? "draft"}</td>

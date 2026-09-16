@@ -8,6 +8,7 @@ import {
   editorSaveSchema,
   errorBody,
   errorCodes,
+  flowRenameSchema,
   officialCatalog,
   ownerPermissions,
 } from "@howling/contracts";
@@ -23,6 +24,7 @@ import {
   createFlow,
   getFlow,
   listFlows,
+  renameFlow,
   saveDraft,
   saveEditor,
 } from "./store.js";
@@ -98,6 +100,23 @@ export const registerFlowRoutes = (
       return reply.code(404).send(errorBody(errorCodes.notFound, "flow not found"));
     }
     return presentFlow(row);
+  });
+
+  app.patch("/api/v1/sites/:siteId/flows/:flowId", async (request, reply) => {
+    const member = await gate(request, reply, true);
+    if (!member) {
+      return;
+    }
+    const parsed = flowRenameSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send(errorBody(errorCodes.invalidRequest, "이름이 필요합니다."));
+    }
+    const { flowId } = request.params as { flowId: string };
+    const result = await renameFlow(pool, member.siteId, flowId, parsed.data.name);
+    if (result === "missing") {
+      return reply.code(404).send(errorBody(errorCodes.notFound, "flow not found"));
+    }
+    return { flowId, name: parsed.data.name };
   });
 
   app.put("/api/v1/sites/:siteId/flows/:flowId/draft", async (request, reply) => {
