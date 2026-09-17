@@ -1,10 +1,11 @@
 /**
  * POST /mcp. Bearer only. 쿠키/CSRF 없음.
  */
-import { MCP_TOOL_SCOPES, errorBody, errorCodes } from "@howling/contracts";
+import { errorBody, errorCodes } from "@howling/contracts";
 import type { FastifyInstance } from "fastify";
 import type pg from "pg";
 import { resolveToken } from "../tokens/store.js";
+import { listMcpTools } from "./catalog.js";
 import { dispatchMcpTool } from "./dispatch.js";
 
 export const registerMcpRoutes = (app: FastifyInstance, pool: pg.Pool): void => {
@@ -39,13 +40,7 @@ export const registerMcpRoutes = (app: FastifyInstance, pool: pg.Pool): void => 
       return {
         jsonrpc: "2.0",
         id: rpc.id,
-        result: {
-          tools: Object.keys(MCP_TOOL_SCOPES).map((name) => ({
-            name,
-            description: name.replaceAll("_", " "),
-            inputSchema: { type: "object" },
-          })),
-        },
+        result: { tools: listMcpTools() },
       };
     }
     if (rpc.method !== "tools/call" || !rpc.params?.name) {
@@ -66,12 +61,15 @@ export const registerMcpRoutes = (app: FastifyInstance, pool: pg.Pool): void => 
       rpc.params.arguments ?? {},
     );
     if (!result.ok) {
+      const detail = (result.body as { error?: { message?: string } })?.error;
       return reply.code(result.status).send({
         jsonrpc: "2.0",
         id: rpc.id ?? null,
         error: {
           code: result.status,
-          message: (result.body as { error?: { message?: string } })?.error?.message ?? "denied",
+          message: detail?.message ?? "denied",
+          // 필드 단위 issues·오류 code·컴파일 diagnostics를 그대로 싣는다.
+          data: result.body,
         },
       });
     }

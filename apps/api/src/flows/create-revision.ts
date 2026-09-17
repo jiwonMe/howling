@@ -1,8 +1,15 @@
 /**
  * 초안을 불변 revision으로 고정한다.
  */
-import { errorBody, errorCodes, type RevisionArtifact } from "@howling/contracts";
+import {
+  errorBody,
+  errorCodes,
+  triggerListSchema,
+  triggerNeedsHa,
+  type RevisionArtifact,
+} from "@howling/contracts";
 import type pg from "pg";
+import { invalid } from "../mcp/invalid.js";
 import { denied, outsideFlow, type Actor, type ServiceResult } from "./access.js";
 import { artifactFromDraft } from "./artifact.js";
 import { getFlow, insertRevision } from "./store.js";
@@ -33,10 +40,12 @@ export const createRevision = async (
   if (!compiled.ok) {
     return { ok: false, status: 400, body: compiled };
   }
+  const triggers = triggerListSchema.safeParse(artifact.triggers);
+  if (!triggers.success) {
+    return invalid("invalid triggers", triggers.error);
+  }
   if (
-    artifact.triggers.some(
-      (item) => item.kind === "ha.state_changed" || item.kind === "device.changed",
-    ) &&
+    artifact.triggers.some((item) => triggerNeedsHa(item.kind)) &&
     !artifact.connections.some((item) => item.kind === "ha")
   ) {
     return {

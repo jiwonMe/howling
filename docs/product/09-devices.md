@@ -51,7 +51,7 @@ HA get_states / state_changed
 - `POST /api/v1/sites/:siteId/devices/integrations` `{ integration?, token?, values?, list? }`
 - WSS `devices.integrate` → `devices.integrated`. 허용 목록 밖의 통합·`entity_id`·HA `flow_id`·접속 키는 클라우드에 없음
 - 허용 목록은 `@howling/contracts` `DEVICE_INTEGRATIONS`. UI는 제품 이름만 보여 줍니다.
-- MCP `list_devices` (`read`), `create_device`·`update_device`·`delete_device` (`edit`). 응답은 summary만
+- MCP `list_devices` (`read`), `act_device` (`run`), `create_device`·`update_device`·`delete_device` (`edit`). 응답은 summary만. `act_device` `{ deviceId, action, data? }`는 대시보드와 같은 `devices.action` 경로
 - WSS `devices.create` → `devices.created`. WSS `devices.action` → `devices.acted`. WSS `devices.update` → `devices.updated`. WSS `devices.delete` → `devices.deleted`. 모두 `entity_id` 없음
 
 숫자 helper 기본값: min 0, max 10000, step 1. 이미 같은 이름이 있으면 그 기기를 돌려줍니다.

@@ -174,6 +174,11 @@ export const deviceActionBodySchema = z.object({
   data: actionDataSchema.optional(),
 });
 
+/** core.effect adapter "device" operation "read" 입력. 현재 상태를 읽는다. */
+export const deviceReadRequestSchema = z.object({
+  deviceId: z.string().min(1),
+});
+
 export const deviceActionInvokeSchema = deviceActionRequestSchema.and(
   z.object({ requestId: z.string().min(1) }),
 );
@@ -226,6 +231,7 @@ export type DevicesSnapshot = z.infer<typeof devicesSnapshotSchema>;
 export type DeviceTriggerConfig = z.infer<typeof deviceTriggerConfigSchema>;
 export type DeviceActionRequest = z.infer<typeof deviceActionRequestSchema>;
 export type DeviceActionBody = z.infer<typeof deviceActionBodySchema>;
+export type DeviceReadRequest = z.infer<typeof deviceReadRequestSchema>;
 export type DeviceActionInvoke = z.infer<typeof deviceActionInvokeSchema>;
 export type DeviceActionResult = z.infer<typeof deviceActionResultSchema>;
 export type HelperDeviceKind = z.infer<typeof helperDeviceKindSchema>;

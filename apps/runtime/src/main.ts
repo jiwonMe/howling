@@ -38,6 +38,7 @@ import { listConnections } from "./mcp/store.js";
 import { readSecret } from "./secrets/store.js";
 import { createPairingState } from "./setup/pairing.js";
 import { readRuntimeToken } from "./token.js";
+import { startTimeTriggers } from "./triggers/time.js";
 
 const config = loadRuntimeConfig();
 const db = openSqlite(config.sqlitePath);
@@ -239,6 +240,7 @@ reportAll();
 retainLocal(host.db);
 const reportTimer = setInterval(() => reportAll(), 5000);
 const retainTimer = setInterval(() => retainLocal(host.db), 60_000);
+const timeTriggers = startTimeTriggers({ host, ha: () => ha });
 
 const app = createRuntimeApp(db, host, {
   secretRoot: config.secretRoot,
@@ -258,6 +260,7 @@ await app.listen({ host: config.listenHost, port: config.listenPort });
 const shutdown = () => {
   clearInterval(reportTimer);
   clearInterval(retainTimer);
+  timeTriggers.stop();
   host.stop();
   ha?.stop();
   void mcpRegistry.stop();

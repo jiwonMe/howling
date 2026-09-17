@@ -13,7 +13,31 @@ import { MapFields } from "./map-fields.js";
 
 type NodeInstance = WorkflowDefinition["nodes"][number];
 
-const OPERATORS = ["eq", "neq", "gt", "gte", "lt", "lte", "isTrue", "isFalse"] as const;
+const OPERATORS = [
+  "eq",
+  "neq",
+  "gt",
+  "gte",
+  "lt",
+  "lte",
+  "isTrue",
+  "isFalse",
+  "in",
+  "notIn",
+] as const;
+
+/** in/notIn의 비교 목록. 쉼표로 나눈 문자열이고, 숫자로 읽히면 숫자로 저장한다. */
+const literalList = (binding?: InputBinding): string =>
+  binding && binding.kind === "literal" && Array.isArray(binding.value)
+    ? binding.value.map((item) => String(item)).join(", ")
+    : "";
+
+const parseList = (text: string): (string | number)[] =>
+  text
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item !== "")
+    .map((item) => (Number.isFinite(Number(item)) ? Number(item) : item));
 
 export const NodeFields = (props: {
   readonly definition: WorkflowDefinition;
@@ -30,7 +54,8 @@ export const NodeFields = (props: {
   const setInput = (key: string, binding: InputBinding) =>
     props.onNode({ ...node, inputs: { ...node.inputs, [key]: binding } });
   const operator = String(node.config.operator ?? "gt");
-  const needsRight = operator !== "isTrue" && operator !== "isFalse";
+  const isList = operator === "in" || operator === "notIn";
+  const needsRight = operator !== "isTrue" && operator !== "isFalse" && !isList;
   switch (node.type) {
     case "core.input":
       return <p className={muted}>설정할 것이 없습니다. 트리거 값이 그대로 다음 노드로 갑니다.</p>;
@@ -83,6 +108,14 @@ export const NodeFields = (props: {
               testId="bind-right"
               value={literalNumber(node.inputs.right)}
               onChange={(value) => setInput("right", { kind: "literal", value })}
+            />
+          ) : null}
+          {isList ? (
+            <TextField
+              label="비교 목록 (쉼표로 구분)"
+              testId="bind-right-list"
+              value={literalList(node.inputs.right)}
+              onChange={(value) => setInput("right", { kind: "literal", value: parseList(value) })}
             />
           ) : null}
           <p className={muted}>맞으면 「참」 포트, 아니면 「거짓」 포트로 이어진 노드가 실행됩니다.</p>

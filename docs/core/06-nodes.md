@@ -42,6 +42,7 @@
 | `eq`, `neq` | left, right | JSON 동등 비교 |
 | `gt`, `gte`, `lt`, `lte` | left, right | **둘 다 number**. 문자열 `"10"`은 변환하지 않음 |
 | `isTrue`, `isFalse` | left | left가 boolean이어야 함 |
+| `in`, `notIn` | left, right | **right가 배열**. 원소와 left를 JSON 동등 비교 |
 
 출력: `{ "result": true }` 또는 `{ "result": false }`
 

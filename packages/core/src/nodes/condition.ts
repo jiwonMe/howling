@@ -16,6 +16,8 @@ export const CONDITION_OPERATORS = [
   "lte",
   "isTrue",
   "isFalse",
+  "in",
+  "notIn",
 ] as const;
 
 export type ConditionOperator = (typeof CONDITION_OPERATORS)[number];
@@ -63,11 +65,30 @@ const compareNumbers = (
   return left <= right;
 };
 
+const sameJson = (left: JsonValue, right: JsonValue): boolean =>
+  JSON.stringify(left) === JSON.stringify(right);
+
+/** right는 배열이어야 한다. 원소 비교는 eq와 같은 구조 동등. */
+const evaluateMembership = (
+  operator: "in" | "notIn",
+  left: JsonValue,
+  right: JsonValue | undefined,
+): { ok: true; result: boolean } | { ok: false; message: string } => {
+  if (!Array.isArray(right)) {
+    return { ok: false, message: `${operator} requires an array right value` };
+  }
+  const found = right.some((item) => sameJson(left, item));
+  return { ok: true, result: operator === "in" ? found : !found };
+};
+
 const evaluateCondition = (
   operator: ConditionOperator,
   left: JsonValue,
   right: JsonValue | undefined,
 ): { ok: true; result: boolean } | { ok: false; message: string } => {
+  if (operator === "in" || operator === "notIn") {
+    return evaluateMembership(operator, left, right);
+  }
   if (operator === "isTrue") {
     return typeof left === "boolean"
       ? { ok: true, result: left }

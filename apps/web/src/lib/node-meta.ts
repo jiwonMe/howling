@@ -110,6 +110,8 @@ export const OPERATOR_LABELS: Record<string, { readonly symbol: string; readonly
   lte: { symbol: "≤", text: "작거나 같으면" },
   isTrue: { symbol: "참", text: "참이면" },
   isFalse: { symbol: "거짓", text: "거짓이면" },
+  in: { symbol: "∈", text: "목록에 있으면" },
+  notIn: { symbol: "∉", text: "목록에 없으면" },
 };
 
 export const PORT_LABELS: Record<string, string> = {

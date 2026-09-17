@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   MCP_TOOL_SCOPES,
   connectionsSnapshotSchema,
+  mcpCreateFlowSchema,
   mcpEffectInputSchema,
   runtimeStatusSchema,
   tokenListItemSchema,
@@ -77,5 +78,20 @@ describe("phase 4 contracts", () => {
     expect(MCP_TOOL_SCOPES.delete_flow).toEqual(["edit"]);
     expect(MCP_TOOL_SCOPES.get_run_summary).toEqual(["read"]);
     expect(MCP_TOOL_SCOPES.get_run_detail).toEqual(["data.read"]);
+    expect(MCP_TOOL_SCOPES.list_devices).toEqual(["read"]);
+    expect(MCP_TOOL_SCOPES.act_device).toEqual(["run"]);
+    expect(MCP_TOOL_SCOPES.create_flow).toEqual(["edit"]);
+  });
+
+  it("requires a name on create_flow and keeps the draft optional", () => {
+    expect(mcpCreateFlowSchema.parse({ name: " 거실 조명 " }).name).toBe("거실 조명");
+    expect(mcpCreateFlowSchema.safeParse({ name: "" }).success).toBe(false);
+    const withDraft = mcpCreateFlowSchema.parse({
+      name: "A",
+      definition: { nodes: [] },
+      triggers: [],
+      connections: [],
+    });
+    expect(withDraft.triggers).toEqual([]);
   });
 });

@@ -1,13 +1,14 @@
 /**
  * 목록·조회·초안·검증. 권한만 먼저 본다.
  */
-import { errorBody, errorCodes, type DraftSave } from "@howling/contracts";
+import { errorBody, errorCodes, triggerListSchema, type DraftSave } from "@howling/contracts";
 import type pg from "pg";
+import { invalid } from "../mcp/invalid.js";
 import { runtimeIdBySite } from "../runtime/hub.js";
 import { denied, outsideFlow, type Actor, type ServiceResult } from "./access.js";
 import { readRunEvents } from "./events.js";
 import { presentFlow, presentRun } from "./present.js";
-import { getRun } from "./runs.js";
+import { getRun, listRuns } from "./runs.js";
 import { getFlow, listFlows, saveDraft } from "./store.js";
 import { compileDefinition } from "./validate.js";
 
@@ -50,6 +51,10 @@ export const saveDraftFor = async (
   if (scope) {
     return scope;
   }
+  const triggers = triggerListSchema.safeParse(draft.triggers);
+  if (!triggers.success) {
+    return invalid("invalid triggers", triggers.error);
+  }
   const result = await saveDraft(pool, {
     siteId: actor.siteId,
     flowId,
@@ -91,6 +96,22 @@ export const getRunFor = async (
     return { ok: false, status: 404, body: errorBody(errorCodes.notFound, "run not found") };
   }
   return { ok: true, status: 200, body: presentRun(row) };
+};
+
+/** 최근 실행부터. flowId를 주면 그 플로만, 토큰이 플로에 묶였으면 그 플로만. */
+export const listRunsFor = async (
+  pool: pg.Pool,
+  actor: Actor,
+  input: { readonly flowId?: string; readonly limit?: number },
+): Promise<ServiceResult> => {
+  const flowId = actor.flowId ?? input.flowId;
+  const scope = denied(actor, "read") ?? (flowId ? outsideFlow(actor, flowId) : undefined);
+  if (scope) {
+    return scope;
+  }
+  const limit = Math.min(Math.max(Math.trunc(input.limit ?? 20), 1), 100);
+  const rows = await listRuns(pool, actor.siteId, flowId);
+  return { ok: true, status: 200, body: { runs: rows.slice(0, limit).map(presentRun) } };
 };
 
 export const getRunSummaryFor = async (

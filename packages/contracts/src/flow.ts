@@ -4,7 +4,13 @@
  */
 import type { WorkflowDefinition } from "@howling/core";
 
-export type TriggerKind = "ha.state_changed" | "device.changed" | "manual" | "timer";
+export type TriggerKind =
+  | "ha.state_changed"
+  | "device.changed"
+  | "sun"
+  | "schedule"
+  | "manual"
+  | "timer";
 
 export interface TriggerBinding {
   readonly id: string;

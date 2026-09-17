@@ -18,7 +18,7 @@
 | --- | --- |
 | `core.input` | 실행 입력을 `value`로 게시 |
 | `analysis.rolling-mean` | 최근 N개 숫자 평균 |
-| `core.condition` | `eq\|neq\|gt\|gte\|lt\|lte\|isTrue\|isFalse` 후 true/false |
+| `core.condition` | `eq\|neq\|gt\|gte\|lt\|lte\|isTrue\|isFalse\|in\|notIn` 후 true/false |
 | `core.effect` | 기기·MCP·HA adapter 호출 |
 | `core.map` | 해석된 필드를 한 객체로 묶음 |
 | `core.delay` | `durationMs` 동안 대기 |

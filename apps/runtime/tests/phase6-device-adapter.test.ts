@@ -161,6 +161,48 @@ describe("phase 6 device adapter", () => {
     db.close();
   });
 
+  it("reads the current state locally without calling the hub", async () => {
+    const { db } = openTestDb();
+    const switchId = deviceIdOf("runtime_dev", "switch.desk");
+    const weatherId = deviceIdOf("runtime_dev", "weather.home");
+    const powerId = deviceIdOf("runtime_dev", "input_number.test_power");
+    upsertDevices(db, "runtime_dev", [
+      { entityId: "switch.desk", state: "off", friendlyName: "작업실 스위치" },
+      { entityId: "weather.home", state: "partlycloudy", friendlyName: "Forecast 집" },
+      { entityId: "input_number.test_power", state: "800", friendlyName: "Test Power" },
+    ]);
+    const adapter = createDeviceAwareAdapter({
+      db,
+      next: createHaAwareAdapter({
+        fake: createFakeAdapter(),
+        ha: () => undefined,
+        testHooks: true,
+      }),
+    });
+    const readOf = (deviceId: string) =>
+      adapter.execute({
+        ...requestOf({ deviceId }),
+        intent: { kind: "external", adapter: "device", operation: "read", input: { deviceId } },
+      });
+    const off = await readOf(switchId);
+    expect(off).toMatchObject({
+      status: "succeeded",
+      value: { id: switchId, kind: "switch", state: "off", on: false, value: null },
+    });
+    const weather = await readOf(weatherId);
+    expect(weather).toMatchObject({
+      status: "succeeded",
+      value: { kind: "weather", state: "partlycloudy", on: null },
+    });
+    const power = await readOf(powerId);
+    expect(power).toMatchObject({ status: "succeeded", value: { value: 800, state: "800" } });
+    expect(JSON.stringify(power)).not.toContain("input_number");
+    expect(JSON.stringify(power)).not.toContain("entityId");
+    const missing = await readOf("dev_missing");
+    expect(missing).toMatchObject({ status: "unknown", reason: "device missing" });
+    db.close();
+  });
+
   it("returns unknown when the device is missing", async () => {
     const { db } = openTestDb();
     const adapter = createDeviceAwareAdapter({

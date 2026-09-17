@@ -35,6 +35,7 @@ export {
 export type { IssueTokenRequest, IssuedToken, TokenListItem } from "./tokens.js";
 export {
   MCP_TOOL_SCOPES,
+  mcpCreateFlowSchema,
   mcpEffectInputSchema,
   mcpLocalSetupSchema,
   mcpServerSnapshotSchema,
@@ -43,12 +44,27 @@ export {
   oauthCodePayloadSchema,
 } from "./mcp.js";
 export type {
+  McpCreateFlow,
   McpEffectInput,
   McpLocalSetup,
   McpSnapshot,
   McpToolCatalogItem,
   OauthCodePayload,
 } from "./mcp.js";
+export {
+  TRIGGER_KINDS,
+  haStateTriggerConfigSchema,
+  scheduleTriggerConfigSchema,
+  sunTriggerConfigSchema,
+  triggerBindingSchema,
+  triggerListSchema,
+  triggerNeedsHa,
+} from "./triggers.js";
+export type {
+  HaStateTriggerConfig,
+  ScheduleTriggerConfig,
+  SunTriggerConfig,
+} from "./triggers.js";
 export {
   pairingClaimRequestSchema,
   pairingClaimResponseSchema,
@@ -60,6 +76,15 @@ export type {
   PairingCreateResponse,
 } from "./pairing.js";
 export { NODE_CATALOG_VERSION, officialCatalog } from "./catalog.js";
+export {
+  DARK_WEATHER,
+  SWITCH_PLACEHOLDER,
+  WEATHER_PLACEHOLDER,
+  sunsetDeskLightConnections,
+  sunsetDeskLightDefinition,
+  sunsetDeskLightExample,
+  sunsetDeskLightTriggers,
+} from "./example-sunset.js";
 export type { CatalogNode } from "./catalog.js";
 export {
   deployRequestSchema,
@@ -160,6 +185,7 @@ export {
   deviceCreateRequestSchema,
   deviceCreateResultSchema,
   deviceKindSchema,
+  deviceReadRequestSchema,
   deviceSummarySchema,
   deviceTriggerConfigSchema,
   devicesSnapshotSchema,
@@ -207,6 +233,7 @@ export type {
   DeviceCreateResult,
   DeviceKind,
   DeviceOrigin,
+  DeviceReadRequest,
   DeviceSummary,
   DeviceTriggerConfig,
   DevicesSnapshot,

@@ -10,6 +10,7 @@ import {
   type DeviceActionResult,
 } from "@howling/contracts";
 import type pg from "pg";
+import { denied, type Actor, type ServiceResult } from "../flows/access.js";
 import { runtimeBySite, sendToRuntime } from "../runtime/hub.js";
 import { upsertSiteDevice } from "./store.js";
 
@@ -35,12 +36,35 @@ export const acceptDeviceActed = (payload: unknown): void => {
   wait.resolve(parsed.data);
 };
 
+/**
+ * MCP act_device. 집 상태를 바꾸는 동작이라 `run` scope가 필요하다.
+ */
+export const actDeviceFor = async (
+  pool: pg.Pool,
+  actor: Actor,
+  deviceId: string,
+  body: unknown,
+): Promise<ServiceResult> => {
+  const scope = denied(actor, "run");
+  if (scope) {
+    return scope;
+  }
+  if (deviceId === "") {
+    return {
+      ok: false,
+      status: 400,
+      body: errorBody(errorCodes.invalidRequest, "deviceId가 필요합니다."),
+    };
+  }
+  return actSiteDevice(pool, actor.siteId, deviceId, body);
+};
+
 export const actSiteDevice = async (
   pool: pg.Pool,
   siteId: string,
   deviceId: string,
   body: unknown,
-): Promise<{ ok: boolean; status: number; body: unknown }> => {
+): Promise<ServiceResult> => {
   const parsed = deviceActionBodySchema.safeParse(body);
   if (!parsed.success) {
     return {

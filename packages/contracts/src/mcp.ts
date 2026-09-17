@@ -63,8 +63,11 @@ export const mcpToolScopeSchema = z.enum([
 ]);
 
 export const MCP_TOOL_SCOPES = {
+  describe_flow_schema: ["read"],
   list_flows: ["read"],
   get_flow: ["read"],
+  create_flow: ["edit"],
+  rename_flow: ["edit"],
   save_draft: ["edit"],
   validate_flow: ["edit"],
   start_dry_run: ["run"],
@@ -73,14 +76,24 @@ export const MCP_TOOL_SCOPES = {
   deactivate_flow: ["deploy"],
   delete_flow: ["edit"],
   start_live_run: ["run"],
+  list_runs: ["read"],
   get_run: ["read"],
   get_run_summary: ["read"],
   get_run_detail: ["data.read"],
   list_devices: ["read"],
+  act_device: ["run"],
   create_device: ["edit"],
   update_device: ["edit"],
   delete_device: ["edit"],
 } as const;
+
+/** MCP create_flow 인자. 초안을 같이 주면 version 1에 바로 저장한다. */
+export const mcpCreateFlowSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  definition: z.unknown().optional(),
+  triggers: z.array(z.unknown()).optional(),
+  connections: z.array(z.unknown()).optional(),
+});
 
 export const oauthCodePayloadSchema = z.object({
   state: z.string().min(1),
@@ -91,4 +104,5 @@ export type McpLocalSetup = z.infer<typeof mcpLocalSetupSchema>;
 export type McpToolCatalogItem = z.infer<typeof mcpToolCatalogItemSchema>;
 export type McpSnapshot = z.infer<typeof mcpSnapshotSchema>;
 export type McpEffectInput = z.infer<typeof mcpEffectInputSchema>;
+export type McpCreateFlow = z.infer<typeof mcpCreateFlowSchema>;
 export type OauthCodePayload = z.infer<typeof oauthCodePayloadSchema>;

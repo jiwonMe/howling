@@ -1,7 +1,7 @@
 /**
  * Cloud desired.deployment를 로컬 활성 포인터로 만든다.
  */
-import { NODE_CATALOG_VERSION, type RevisionArtifact } from "@howling/contracts";
+import { NODE_CATALOG_VERSION, triggerNeedsHa, type RevisionArtifact } from "@howling/contracts";
 import type { HowlingEngine } from "@howling/core";
 import type Database from "better-sqlite3";
 import { assertMcpReady } from "../mcp/deploy.js";
@@ -36,9 +36,7 @@ export const activateArtifact = (
   }
   const current = getDeployment(db, input.artifact.flowId);
   if (
-    input.artifact.triggers.some(
-      (item) => item.kind === "ha.state_changed" || item.kind === "device.changed",
-    ) &&
+    input.artifact.triggers.some((item) => triggerNeedsHa(item.kind)) &&
     !input.artifact.connections.some((item) => item.kind === "ha")
   ) {
     return { status: "failed", error: "HA connection required" };
