@@ -17,7 +17,10 @@ import {
   deviceIntegrateResultSchema,
   deviceSummarySchema,
   devicesSnapshotSchema,
+  booleanTriggerOf,
+  defaultTriggerKey,
   fieldsOf,
+  isTriggerableDevice,
   onDeviceBoard,
   originLabel,
   originOf,
@@ -114,6 +117,17 @@ describe("device catalog contracts", () => {
     expect(actionsOf("player")).toContain("play_media");
     expect(productPartsOf("Apple TV")?.map((item) => item.kind)).toEqual(["player", "remote", "binary"]);
     expect(JSON.stringify(productPartsOf("apple_tv"))).not.toContain("media_player");
+    expect(
+      isTriggerableDevice({
+        kind: "fields",
+        fields: [{ key: "state", type: "boolean" }],
+      }),
+    ).toBe(true);
+    expect(defaultTriggerKey({ kind: "fields", fields: [{ key: "state", type: "boolean" }] })).toBe(
+      "state",
+    );
+    expect(booleanTriggerOf("true")).toBe(true);
+    expect(booleanTriggerOf("off")).toBe(false);
   });
 
   it("reserves devices.snapshot and scopes list_devices", () => {

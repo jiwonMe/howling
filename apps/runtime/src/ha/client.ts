@@ -14,6 +14,7 @@ export type HaEntityRow = {
 
 export type HaEvent = HaEntityRow & {
   readonly previous?: string;
+  readonly previousAttrs?: Record<string, string | number | boolean>;
 };
 
 export interface HaHandle {

@@ -8,7 +8,7 @@
 | --- | --- |
 | `/` 기기 | 집 기기와 가상 기기를 나눔. 타일을 누르면 켜기·끄기·값 변경. 센서·날씨는 목록에만 |
 | `/devices` | 이름, 종류, 구분(집/가상), 현재값, 동작, 연결, 수정·삭제. entity id 없음 |
-| 편집기 Trigger | 숫자 기기 select. 저장 `{ kind: "device.changed", config: { deviceId, inputKey } }` |
+| 편집기 Trigger | 숫자·스위치·여러 값 기기 select. 여러 값은 필드도 고른다. 저장 `{ kind: "device.changed", config: { deviceId, inputKey } }` |
 | 편집기 Effect | adapter `device` / `action`. 가상은 `이름 · 가상`. 저장 `inputs.request = { deviceId, action, data? }` |
 
 빈 목록: "아직 기기가 없습니다. 위에서 연결하거나 허브 기기를 기다립니다."

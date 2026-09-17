@@ -19,5 +19,11 @@ export const applyVirtualAction = (
     return undefined;
   }
   const mapped = writeDeviceState(db, row, request.action, request.data ?? {});
-  return { entityId: mapped.entityId, state: mapped.state, previous: row.state };
+  return {
+    entityId: mapped.entityId,
+    state: mapped.state,
+    previous: row.state,
+    attrs: mapped.attrs,
+    previousAttrs: row.attrs,
+  };
 };

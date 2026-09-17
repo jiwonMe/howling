@@ -9,6 +9,8 @@ export const looksLikeEntityId = (value: string): boolean =>
 export const DEVICE_STATE_LABELS: Readonly<Record<string, string>> = {
   on: "켜짐",
   off: "꺼짐",
+  true: "켜짐",
+  false: "꺼짐",
   idle: "대기",
   playing: "재생 중",
   paused: "일시정지",

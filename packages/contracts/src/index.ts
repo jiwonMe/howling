@@ -222,6 +222,12 @@ export { productIdOf, productNameOf, productPartsOf } from "./device-products.js
 export type { ProductPart } from "./device-products.js";
 export { parseVirtualDevicesYaml } from "./device-yaml.js";
 export {
+  booleanTriggerOf,
+  defaultTriggerKey,
+  isPrimaryTriggerKey,
+  isTriggerableDevice,
+} from "./device-triggers.js";
+export {
   FIELDS_ATTR,
   actionFieldsOf,
   applyFieldData,

@@ -37,6 +37,8 @@ export const dispatchDeviceTriggers = (
         syncing,
         inputKey: parsed.data.inputKey,
         ...(event.previous === undefined ? {} : { previous: event.previous }),
+        ...(event.attrs ? { attrs: event.attrs } : {}),
+        ...(event.previousAttrs ? { previousAttrs: event.previousAttrs } : {}),
       });
       if (!matched) {
         continue;

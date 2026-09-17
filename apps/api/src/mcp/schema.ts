@@ -121,8 +121,11 @@ const triggers = {
         required: ["deviceId", "inputKey"],
         properties: { deviceId: { type: "string" }, inputKey: { type: "string" } },
       },
-      runInput: { "<inputKey>": "<number | boolean>" },
-      note: "숫자·binary 기기 값이 바뀔 때. inputKey 이름으로 새 값이 input에 들어간다.",
+      runInput: { "<inputKey>": "<number | boolean>", state: true, on: true },
+      note:
+        "숫자·스위치·여러 값(fields) 기기가 바뀔 때. 지켜본 필드가 바뀌면 실행된다. " +
+        "boolean은 input.state / input.on / input.<inputKey>가 true|false. " +
+        "여러 값 기기는 나머지 필드도 input에 같이 실린다. 조건은 /state eq true.",
     },
     {
       kind: "ha.state_changed",

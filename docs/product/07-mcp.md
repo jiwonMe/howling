@@ -87,6 +87,7 @@ list_runs / get_run            실행 추적. start_live_run은 { accepted: true
 | --- | --- | --- | --- |
 | `sun` | `{ event: "sunset" \| "sunrise", offsetMinutes?: -720..720 }` | 예 (`sun.sun` next_setting/next_rising) | `{ trigger: { kind, event, offsetMinutes, eventAt, at } }` |
 | `schedule` | `{ time: "HH:mm", days?: [0..6] }` | 아니오 | `{ trigger: { kind, time, days?, at } }` |
+| `device.changed` | `{ deviceId, inputKey }` | 허브 연결이 artifact에 필요. 가상 기기도 같음 | `{ state: true, on: true, <inputKey>: …, <다른 필드> }` |
 
 Runtime `triggers/time.ts`가 20초마다 활성 revision을 돌며 due가 된 트리거를 inbox에 넣는다. due는 미래일 때 한 번 기억하므로 HA의 `next_setting`이 다음 날로 넘어가도 오늘 것을 잊지 않는다. due 뒤 5분(grace) 안이면 재시작 후에도 실행하고, idempotencyKey는 `artifactId:triggerId:dueISO`다.
 

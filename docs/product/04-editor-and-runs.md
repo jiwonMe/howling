@@ -29,7 +29,7 @@
 
 1. `/flows`에서 **새 플로**를 누른다. 이름이 `Power alert`로 만들어진다.
 2. 팔레트에서 Input → Rolling mean → Condition → Effect 순으로 추가한다.
-3. Trigger에서 기기 `Test Power`를 고른다. 저장값은 `kind: "device.changed"`, `config.deviceId`, `inputKey: "power"`다. `entity_id`는 초안에 없다.
+3. Trigger에서 기기 `Test Power`를 고른다. 저장값은 `kind: "device.changed"`, `config.deviceId`, `inputKey: "power"`다. `entity_id`는 초안에 없다. 여러 값 가상 기기는 기기와 필드(예: 착석 `state`)를 고른다. 실행 input은 `{ state: true, on: true, …필드 }`다.
 4. mean 노드: `windowSize` `5`, value path `/power`.
 5. condition 노드: operator는 기본 `gt`, right `1000`. left는 mean의 `mean` 출력.
 6. effect 노드: 기기 `Test Alert`, 동작 `turn_on`. adapter는 `device` / `action`. request는 `{ deviceId, action }`.
