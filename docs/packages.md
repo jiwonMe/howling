@@ -26,6 +26,7 @@ pnpm test         # 단위·계약·integration
 pnpm typecheck    # 전체 타입 검사
 pnpm build        # shared packages와 세 앱
 pnpm test:e2e     # 테스트 CA + Compose + Playwright
+pnpm image:pi4    # Raspberry Pi 4 설치 이미지 (HA + runtime)
 ```
 
 ## `@howling/core` 안 구조

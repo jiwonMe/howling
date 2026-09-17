@@ -33,7 +33,7 @@ pnpm dev
 
 브라우저 `http://127.0.0.1:5173` → 로그인 `owner@howling.test` / `howling-dev` → runtime `http://127.0.0.1:4000/setup`에서 HA·MCP·pairing → `/connections`에서 code 입력 → `/flows`에서 작성·시험·배포 → `/analytics`에서 관측 필드를 고릅니다.
 
-HA OS 앱은 [infra/ha-addon](../../infra/ha-addon/README.md)입니다. Supervisor 토큰이 있으면 HA URL을 다시 넣지 않습니다.
+HA OS 앱은 [infra/ha-addon](../../infra/ha-addon/README.md)입니다. Supervisor 토큰이 있으면 HA URL을 다시 넣지 않습니다. Raspberry Pi 4에서 HA와 runtime을 한 이미지로 켜려면 [Raspberry Pi 4](./11-raspberry-pi.md)입니다.
 
 ## OAuth
 

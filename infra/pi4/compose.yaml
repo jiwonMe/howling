@@ -1,0 +1,34 @@
+name: howling-home
+
+services:
+  home-assistant:
+    image: ghcr.io/home-assistant/home-assistant:${HOWLING_HA_VERSION:-2025.8.3}
+    container_name: howling-ha
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    environment:
+      TZ: ${TZ:-Asia/Seoul}
+    volumes:
+      - ${HOWLING_DATA:-/opt/howling/data}/ha:/config
+      - /run/dbus:/run/dbus:ro
+
+  runtime:
+    image: ${HOWLING_RUNTIME_IMAGE:-howling-runtime:pi4}
+    container_name: howling-runtime
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      - home-assistant
+    environment:
+      TZ: ${TZ:-Asia/Seoul}
+      RUNTIME_HOST: 0.0.0.0
+      RUNTIME_PORT: "4000"
+      RUNTIME_API_URL: ${RUNTIME_API_URL:-wss://app.howling.life/api/v1/runtime/ws}
+      RUNTIME_API_HTTP: ${RUNTIME_API_HTTP:-https://app.howling.life}
+      RUNTIME_SQLITE_PATH: /data/runtime.sqlite
+      RUNTIME_SECRET_ROOT: /data
+      RUNTIME_TOKEN: ""
+      BOOTSTRAP_RUNTIME_TOKEN: ""
+    volumes:
+      - ${HOWLING_DATA:-/opt/howling/data}/runtime:/data

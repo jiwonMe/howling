@@ -19,7 +19,7 @@ Howling은 Home Assistant 위에 올리는 자동화입니다. 그래프를 그�
 
 ## 아직 없는 것
 
-모바일 앱, 클라우드 outbound MCP, 다중 사이트 UI는 없습니다. HA OS 애드온은 [`infra/ha-addon`](./infra/ha-addon/README.md)에 있고 마켓 배포는 없습니다.
+모바일 앱, 클라우드 outbound MCP, 다중 사이트 UI는 없습니다. HA OS 애드온은 [`infra/ha-addon`](./infra/ha-addon/README.md)에 있고 마켓 배포는 없습니다. Raspberry Pi 4에서 HA와 runtime을 같이 켜는 이미지는 [`docs/product/11-raspberry-pi.md`](./docs/product/11-raspberry-pi.md)입니다.
 
 ## 저장소
 
@@ -77,6 +77,16 @@ pnpm dev:cloud
 
 기본 클라우드는 `https://app.howling.life`입니다. WebSocket은 `wss://app.howling.life/api/v1/runtime/ws`입니다. `http://127.0.0.1:4000/setup`에서 HA를 넣고 Pairing을 시작합니다. 브라우저는 `https://app.howling.life`에 로그인한 뒤 Connections에 code를 넣습니다. 변수는 [로컬 개발](./docs/product/02-local-dev.md)입니다.
 
+## Raspberry Pi 4에서 HA와 runtime을 같이 켜기
+
+한 장의 microSD에 Home Assistant와 집 runtime이 같이 뜹니다. 클라우드는 `https://app.howling.life`입니다.
+
+```bash
+HOWLING_PI_USER=howling HOWLING_PI_PASSWORD='change-me-now' pnpm image:pi4
+```
+
+결과는 `dist/pi4/howling-home-rpi4-64.img.xz`입니다. 카드에 쓰는 법과 pairing은 [Raspberry Pi 4](./docs/product/11-raspberry-pi.md)입니다.
+
 ## 프로덕션
 
 웹과 API는 Railway입니다. 공개 주소는 `https://app.howling.life`입니다. 로그인은 Logto(`https://auth.howling.life`)와 Google입니다. 변수와 배포는 [Railway 배포](./docs/product/10-deploy-railway.md)입니다.
@@ -98,6 +108,7 @@ pnpm dev:cloud
 | [관측](./docs/product/08-analytics-and-data.md) | 로그, 원본 |
 | [기기](./docs/product/09-devices.md) | 등록, 가상, `fields`, 트리거 |
 | [배포](./docs/product/10-deploy-railway.md) | Railway, Logto |
+| [Raspberry Pi 4](./docs/product/11-raspberry-pi.md) | HA+runtime 설치 이미지 |
 
 설계 메모: [DESIGN.md](./DESIGN.md). 로드맵: [plan/product-plan.md](./plan/product-plan.md).
 

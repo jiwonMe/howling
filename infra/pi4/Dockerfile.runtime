@@ -1,0 +1,22 @@
+# Raspberry Pi 4(linux/arm64)용 runtime. 클라우드는 pairing으로만 붙는다.
+FROM node:22-bookworm AS builder
+RUN corepack enable
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
+COPY packages ./packages
+COPY apps ./apps
+COPY infra/oidc ./infra/oidc
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @howling/core --filter @howling/contracts --filter @howling/runtime build
+RUN pnpm --filter @howling/runtime --prod deploy --legacy /out/runtime \
+  && cp -r apps/runtime/dist /out/runtime/dist \
+  && cp -r apps/runtime/migrations /out/runtime/migrations
+
+FROM node:22-bookworm-slim
+ENV NODE_ENV=production
+ENV RUNTIME_HOST=0.0.0.0
+ENV RUNTIME_PORT=4000
+WORKDIR /app/runtime
+COPY --from=builder /out/runtime /app/runtime
+EXPOSE 4000
+CMD ["node", "dist/main.js"]

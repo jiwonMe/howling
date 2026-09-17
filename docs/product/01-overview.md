@@ -80,6 +80,6 @@ Howling은 Home Assistant 위에 올리는 자동화입니다. 브라우저에�
 
 ## 로컬과 클라우드
 
-로컬은 `pnpm dev`로 api · runtime · web · 테스트 OIDC를 같이 켭니다. 집 runtime만 켜고 `https://app.howling.life`에 붙이려면 `pnpm dev:cloud`입니다. 절차는 [로컬 개발](./02-local-dev.md)입니다.
+로컬은 `pnpm dev`로 api · runtime · web · 테스트 OIDC를 같이 켭니다. 집 runtime만 켜고 `https://app.howling.life`에 붙이려면 `pnpm dev:cloud`입니다. 절차는 [로컬 개발](./02-local-dev.md)입니다. Raspberry Pi 4에서 HA와 runtime을 같이 켜는 설치 이미지는 [Raspberry Pi 4](./11-raspberry-pi.md)입니다.
 
 다음: [로컬 개발](./02-local-dev.md)

@@ -11,3 +11,5 @@ docker build -f infra/ha-addon/Dockerfile --build-arg RUNTIME_IMAGE=howling-runt
 설치 후 Home Assistant는 `SUPERVISOR_TOKEN`과 `http://supervisor/core`를 씁니다. URL·LLAT를 다시 넣을 필요는 없습니다. Ingress로 `/setup` pairing만 합니다.
 
 `manifest.json`은 protocol / artifact schema / node catalog 버전을 addon version과 같이 기록합니다.
+
+HA OS 없이 Raspberry Pi 4에서 Home Assistant와 runtime을 같이 켜는 설치 이미지는 [Raspberry Pi 4](../../docs/product/11-raspberry-pi.md)입니다.

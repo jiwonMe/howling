@@ -22,6 +22,7 @@ Howling은 Home Assistant 위에 올리는 자동화입니다. 웹에서 플로�
 9. [관측·원본·설치](./product/08-analytics-and-data.md)
 10. [기기](./product/09-devices.md) — 등록, 가상, `fields`, 트리거
 11. [Railway 배포](./product/10-deploy-railway.md) — `app.howling.life`, Logto, GitHub 자동 배포
+12. [Raspberry Pi 4](./product/11-raspberry-pi.md) — HA와 runtime을 같이 켜는 설치 이미지
 
 ## Core 자습서
 

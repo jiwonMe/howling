@@ -1,0 +1,17 @@
+[Unit]
+Description=Howling Home (Home Assistant + runtime)
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/howling
+ExecStartPre=/usr/local/sbin/howling-firstboot.sh
+ExecStart=/usr/bin/docker compose --env-file /opt/howling/env up -d
+ExecStop=/usr/bin/docker compose --env-file /opt/howling/env stop
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
