@@ -88,6 +88,8 @@ RUNTIME_API_HTTP=https://app.howling.life
 
 `/connections`에서 pairing 코드를 만들고 runtime setup 화면(`http://<runtime>:4000/setup`)에 넣는다. 절차는 [Pairing과 HA](./03-pairing-and-ha.md).
 
+개발 기계에서 runtime과 HA만 띄워 이 배포에 붙이려면 `pnpm dev:cloud`다. [로컬 개발](./02-local-dev.md)의 "클라우드에 붙여서 개발"을 본다.
+
 ## 확인
 
 ```bash

@@ -9,6 +9,9 @@
   "scripts": {
     "dev": "node ./scripts/dev.mjs",
     "dev:deps": "docker compose -f infra/compose/compose.yaml up -d postgres oidc",
+    "dev:cloud": "node ./scripts/dev-cloud.mjs",
+    "dev:ha": "docker compose -f infra/compose/compose.ha.yaml up -d",
+    "dev:ha:down": "docker compose -f infra/compose/compose.ha.yaml down",
     "build": "pnpm -r --if-present --filter './packages/*' --filter './apps/*' --filter './infra/oidc' build",
     "typecheck": "pnpm --filter @howling/core --filter @howling/contracts build && pnpm -r --if-present --filter './packages/*' --filter './apps/*' --filter './infra/oidc' typecheck",
     "test": "pnpm --filter @howling/core --filter @howling/contracts build && pnpm -r --if-present --filter './packages/*' --filter './apps/*' --filter './infra/oidc' test",

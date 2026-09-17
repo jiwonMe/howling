@@ -1,0 +1,14 @@
+default_config:
+
+input_number:
+  test_power:
+    name: Test Power
+    initial: 0
+    min: 0
+    max: 5000
+    step: 1
+
+input_boolean:
+  test_alert:
+    name: Test Alert
+    initial: false

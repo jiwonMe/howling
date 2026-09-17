@@ -22,6 +22,45 @@ pnpm dev
 pnpm dev:deps
 ```
 
+## 클라우드에 붙여서 개발
+
+runtime과 HA만 로컬에서 켜고 화면·API는 배포된 것을 씁니다. api·web·postgres·oidc는 띄우지 않습니다.
+
+```bash
+pnpm dev:cloud
+```
+
+하는 일은 이렇습니다.
+
+1. `https://app.howling.life/health`를 확인합니다. 안 닿으면 바로 멈춥니다.
+2. HA가 `http://127.0.0.1:8123`에 이미 떠 있으면 그대로 쓰고, 없으면 `infra/compose/compose.ha.yaml`(컨테이너 `howling-ha`)로 띄웁니다.
+3. HA 토큰을 `HA_TOKEN` → 이미 저장된 것 → 로컬 dev runtime(`apps/runtime/data/secrets`) 복사 → 새 HA 온보딩 순으로 채웁니다. 넷 다 안 되면 setup 화면에서 직접 넣으라고 알려 줍니다.
+4. runtime을 `wss://app.howling.life/api/v1/runtime/ws`로 띄우고 pairing code를 찍습니다. 클라우드 `/connections`에 넣으면 `online`이 됩니다.
+
+sqlite와 secret은 `apps/runtime/data/cloud`에 따로 둡니다. 로컬 dev runtime의 pairing(`apps/runtime/data`)은 그대로 남습니다.
+
+| 변수 | 기본값 | 뜻 |
+| --- | --- | --- |
+| `HOWLING_CLOUD` | `https://app.howling.life` | 붙을 클라우드 origin |
+| `HA_URL` | `http://127.0.0.1:8123` | 쓸 HA 주소 |
+| `HA_TOKEN` | 없음 | 있으면 이 장기 토큰을 저장한다 |
+| `RUNTIME_PORT` | `4000` | 로컬 runtime 포트 |
+| `HOWLING_SKIP_HA` | 없음 | `1`이면 HA를 건드리지 않는다 |
+| `HOWLING_RUNTIME_DATA` | `apps/runtime/data/cloud` | sqlite·secret 위치 |
+
+`pnpm dev`가 이미 4000을 쓰고 있으면 포트를 옮깁니다.
+
+```bash
+RUNTIME_PORT=4001 pnpm dev:cloud
+```
+
+HA만 따로 켜고 끄려면:
+
+```bash
+pnpm dev:ha
+pnpm dev:ha:down
+```
+
 ## `.env` 예
 
 루트의 [`.env.example`](../../.env.example)을 그대로 써도 됩니다.
@@ -69,6 +108,7 @@ OIDC_TEST_PASSWORD=howling-dev
 | `http://127.0.0.1:4000` | runtime. 클라우드 path를 복제하지 않음 |
 | `http://127.0.0.1:4000/setup` | HA·pairing HTML |
 | `http://127.0.0.1:8081` | 테스트 OIDC |
+| `http://127.0.0.1:8123` | 로컬 Home Assistant. `pnpm dev:ha` |
 | `127.0.0.1:5432` | PostgreSQL `howling` / `howling` / `howling` |
 
 ## 로그인
