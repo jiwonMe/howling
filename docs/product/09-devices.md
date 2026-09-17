@@ -19,8 +19,8 @@
 
 ## 첫 슬라이스
 
-- 트리거: 숫자 기기(`sensor`·`input_number`·`number`·`counter` 중 현재 상태가 숫자)와 감지(`binary_sensor`). 감지는 `value` 0/1
-- 동작: HA 도메인 서비스와 값. `play_media`·`volume_set`·`send_command`·`set_temperature` 등. 통합 전용 서비스와 `browse_media`는 없음
+- 트리거: 숫자 기기(`sensor`·`input_number`·`number`·`counter` 중 현재 상태가 숫자), 감지(`binary_sensor`), 스위치·불리언, 여러 값(`fields`). 숫자 기본 키는 `power`. 감지는 `value`. 스위치·불리언은 `state`. `fields`는 고른 필드(없으면 `state` 또는 첫 필드)
+- 동작: HA 도메인 서비스와 값. 가상 `fields`는 `set_fields`. `play_media`·`volume_set`·`send_command`·`set_temperature` 등. 통합 전용 서비스와 `browse_media`는 없음
 - 표시 이름: HA `friendly_name`. area·registry 그룹핑 없음. `entity_id`·HA 도메인 이름은 화면에 없음
 
 ## id
@@ -77,6 +77,41 @@ HA get_states / state_changed
 ```
 
 여러 값 가상 기기는 한 대입니다. `kind`는 `fields`. 동작은 `set_fields`이고 `data`에 필드 키를 넣습니다. `key: state` 필드는 `device.read`의 `/state`가 됩니다. 나머지 값은 `/attrs/<key>`입니다. 대시보드 대화상자에서 각 필드를 바로 바꿀 수 있습니다.
+
+`device.changed`는 고른 `inputKey`가 바뀔 때 한 번 실행합니다. 불리언이면 input에 `state`·`on`·`value`를 같이 넣습니다. 다른 필드 값도 같이 실립니다.
+
+```bash
+# MCP로 방석을 만들고 착석을 켠다
+# create_device
+{
+  "name": "create_device",
+  "arguments": {
+    "name": "스마트 방석",
+    "fields": [
+      { "key": "sit", "type": "boolean", "label": "착석" },
+      { "key": "pressure", "type": "number", "label": "압력" }
+    ]
+  }
+}
+
+# act_device — sit이 false → true 이면 device.changed 가 돈다
+{
+  "name": "act_device",
+  "arguments": {
+    "deviceId": "dev_cushion",
+    "action": "set_fields",
+    "data": { "sit": true, "pressure": 42 }
+  }
+}
+```
+
+실행 input 예:
+
+```json
+{ "sit": true, "state": true, "on": true, "value": true, "pressure": 42 }
+```
+
+플로 조건은 `eq` left=`/sit`(또는 `/state`) right=`true`로 스튜디오 스위치를 켭니다. `pressure`만 바뀌고 `sit`이 같으면 `inputKey: "sit"` 트리거는 다시 돌지 않습니다.
 
 `device.changed` 트리거와 `adapter: "device"` Effect는 허브(`ha`) connection이 필요합니다. 미등록 device는 배포를 실패로 보지 않습니다. 나중에 같은 id로 나타나면 그때 실행됩니다.
 

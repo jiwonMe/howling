@@ -1,27 +1,27 @@
 # Howling 문서
 
-Howling은 Home Assistant를 이용한 시각적 자동화 플랫폼입니다. 웹에서 플로를 만들고, 로컬 runtime이 실제 장치를 움직이며, 같은 실행이 화면으로 돌아옵니다.
+Howling은 Home Assistant 위에 올리는 자동화입니다. 웹에서 플로를 만들고, 집 runtime이 장치를 움직이며, 같은 실행이 화면으로 돌아옵니다.
 
 문서는 두 갈래입니다.
 
-- **제품** — 로그인부터 pairing, 편집기, 배포, HA, E2E까지 지금 돌아가는 앱
+- **제품** — 로그인부터 pairing, 기기, 편집기, MCP, 배포까지 지금 돌아가는 앱
 - **Core** — `@howling/core` 실행 엔진. HA 없이 JSON과 fixture로 검증
 
-설계 원문은 [`plan/product-plan.md`](../plan/product-plan.md)와 [`plan/core-plan.md`](../plan/core-plan.md)입니다.
+설계 원문은 [`plan/product-plan.md`](../plan/product-plan.md)와 [`plan/core-plan.md`](../plan/core-plan.md)입니다. 설계 메모는 [DESIGN.md](../DESIGN.md)입니다.
 
 ## 제품
 
 1. [패키지 지도](./packages.md) — 워크스페이스와 의존 경계
-2. [제품 개요](./product/01-overview.md) — 구성, 완료 조건, 아직 없는 것
-3. [로컬 개발](./product/02-local-dev.md) — `pnpm dev`, 계정, 포트
+2. [제품 개요](./product/01-overview.md) — 화면, 로그인(로컬 OIDC / 프로덕션 Logto), 역할
+3. [로컬 개발](./product/02-local-dev.md) — `pnpm dev`, `pnpm dev:cloud`, 계정, 포트
 4. [Pairing과 HA](./product/03-pairing-and-ha.md) — 로컬 setup, secret, 준비 상태
-5. [편집기와 실행](./product/04-editor-and-runs.md) — 초안, revision, 배포, run
-6. [E2E](./product/05-e2e.md) — `howling.test`, 테스트 CA, 전력 평균 시나리오
+5. [편집기와 실행](./product/04-editor-and-runs.md) — 초안, 트리거, revision, 배포, run
+6. [E2E](./product/05-e2e.md) — `howling.test`, 테스트 CA, 시나리오
 7. [Dry-run](./product/06-dry-run.md)
-8. [MCP](./product/07-mcp.md)
+8. [MCP](./product/07-mcp.md) — inbound `POST /mcp`, 기기·플로 도구
 9. [관측·원본·설치](./product/08-analytics-and-data.md)
-10. [기기](./product/09-devices.md)
-11. [Railway 배포](./product/10-deploy-railway.md) — `app.howling.life`, `auth.howling.life`, GitHub 자동 배포
+10. [기기](./product/09-devices.md) — 등록, 가상, `fields`, 트리거
+11. [Railway 배포](./product/10-deploy-railway.md) — `app.howling.life`, Logto, GitHub 자동 배포
 
 ## Core 자습서
 
@@ -55,6 +55,8 @@ pnpm dev
 ```
 
 브라우저에서 `http://127.0.0.1:5173` — `owner@howling.test` / `howling-dev`.
+
+집 runtime만 켜고 클라우드에 붙이려면 `pnpm dev:cloud`입니다.
 
 Core만 브라우저에서 보려면 `file://`가 아니라 HTTP를 씁니다.
 

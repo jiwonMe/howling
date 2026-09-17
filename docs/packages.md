@@ -10,7 +10,7 @@ Howling은 pnpm 워크스페이스입니다. Core는 독립 실행 엔진이고,
 | `@howling/core` | [`packages/core`](../packages/core) | 플로 compile, 단계 실행, effect intent, dry-run |
 | `@howling/contracts` | [`packages/contracts`](../packages/contracts) | REST DTO, runtime protocol, catalog, pairing |
 | `@howling/web` | [`apps/web`](../apps/web) | React Router, Vanilla Extract, React Flow 편집기 |
-| `@howling/api` | [`apps/api`](../apps/api) | Fastify, 세션, pairing, flow/revision/deployment, WSS |
+| `@howling/api` | [`apps/api`](../apps/api) | Fastify, 세션, pairing, flow/revision/deployment, inbound MCP, WSS |
 | `@howling/runtime` | [`apps/runtime`](../apps/runtime) | SQLite coordinator, HA connector, 로컬 setup |
 | `@howling/oidc-test` | [`infra/oidc`](../infra/oidc) | 개발·E2E 전용 OIDC issuer |
 | `howling-e2e` | [`e2e`](../e2e) | Playwright. 워크스페이스 패키지가 아님 |
@@ -19,6 +19,9 @@ Howling은 pnpm 워크스페이스입니다. Core는 독립 실행 엔진이고,
 
 ```bash
 pnpm dev          # postgres·oidc 후 api·runtime·web
+pnpm dev:deps     # postgres·oidc만
+pnpm dev:cloud    # 집 runtime·HA만. API는 app.howling.life
+pnpm dev:ha       # 로컬 Home Assistant
 pnpm test         # 단위·계약·integration
 pnpm typecheck    # 전체 타입 검사
 pnpm build        # shared packages와 세 앱

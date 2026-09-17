@@ -113,6 +113,8 @@ OIDC_TEST_PASSWORD=howling-dev
 
 ## 로그인
 
+로컬 `pnpm dev`는 `infra/oidc` 테스트 issuer입니다. 프로덕션은 Logto입니다. Logto를 로컬에 붙이는 법은 [Railway 배포](./10-deploy-railway.md)입니다.
+
 1. `http://127.0.0.1:5173`을 연다.
 2. 상태 화면이 401이면 `/api/v1/auth/login`으로 보낸다.
 3. 테스트 issuer 폼에 아래를 넣는다.
@@ -122,7 +124,7 @@ OIDC_TEST_PASSWORD=howling-dev
 비밀번호: howling-dev
 ```
 
-4. 콜백 후 `Howling` 제목과 API·runtime 카드가 보이면 성공이다.
+4. 콜백 후 기기 화면이 보이면 성공이다. 첫 로그인이 계정과 사이트를 만든다. `.env`의 `BOOTSTRAP_OWNER_EMAIL`과 같은 이메일은 기존 `site_dev`를 받는다.
 
 ## 기동 확인
 
@@ -156,7 +158,7 @@ pnpm typecheck
 pnpm build
 ```
 
-`@howling/core` 테스트는 40개입니다. 제품 작업이 core 소스를 바꾸면 안 됩니다.
+제품 작업이 `@howling/core` 소스를 바꾸면 안 됩니다. 조건 연산자·공식 노드는 이미 core에 있습니다.
 
 ## 자주 막히는 곳
 

@@ -29,7 +29,7 @@
 
 1. `/flows`에서 **새 플로**를 누른다. 이름이 `Power alert`로 만들어진다.
 2. 팔레트에서 Input → Rolling mean → Condition → Effect 순으로 추가한다.
-3. Trigger에서 기기 `Test Power`를 고른다. 저장값은 `kind: "device.changed"`, `config.deviceId`, `inputKey: "power"`다. `entity_id`는 초안에 없다. 여러 값 가상 기기는 기기와 필드(예: 착석 `state`)를 고른다. 실행 input은 `{ state: true, on: true, …필드 }`다.
+3. Trigger에서 기기 `Test Power`를 고른다. 저장값은 `kind: "device.changed"`, `config.deviceId`, `inputKey: "power"`다. `entity_id`는 초안에 없다. 여러 값 가상 기기는 기기와 필드(예: 착석 `sit`)를 고른다. 실행 input은 `{ sit: true, state: true, on: true, …필드 }`다.
 4. mean 노드: `windowSize` `5`, value path `/power`.
 5. condition 노드: operator는 기본 `gt`, right `1000`. left는 mean의 `mean` 출력.
 6. effect 노드: 기기 `Test Alert`, 동작 `turn_on`. adapter는 `device` / `action`. request는 `{ deviceId, action }`.
@@ -132,14 +132,34 @@ curl -sS -H "cookie: ${COOKIE}" \
 
 `device.changed` 또는 HA trigger가 있으면 connections에 `kind: "ha"`가 있어야 배포가 됩니다. catalog version은 `2026.09.1`입니다. 기기는 [기기](./09-devices.md)입니다.
 
+## 트리거 종류
+
+| kind | 어디서 넣나 | config | 실행 input |
+| --- | --- | --- | --- |
+| `device.changed` | 웹 편집기 · MCP · API | `{ deviceId, inputKey }` | `{ state, on, value, <필드> }` |
+| `ha.state_changed` | 편집기 「고급: HA entity」 | `{ entityId, inputKey? }` | 숫자면 `{ [inputKey]: number }` |
+| `sun` | MCP · API | `{ event: "sunset" \| "sunrise", offsetMinutes? }` | `{ trigger: { kind, event, offsetMinutes, eventAt, at } }` |
+| `schedule` | MCP · API | `{ time: "HH:mm", days?: [0..6] }` | `{ trigger: { kind, time, days?, at } }` |
+| `manual` | 실행 버튼 · `start_live_run` | `{}` | 요청 body의 `input` |
+
+여러 값 가상 기기는 편집기에서 기기와 필드(예: 착석 `sit`)를 고릅니다. `sit`이 참이 되면 input 예는 이렇습니다.
+
+```json
+{ "sit": true, "state": true, "on": true, "value": true, "pressure": 42 }
+```
+
+조건 노드는 `eq`로 `true`와 문자열 `"cloudy"`를 같이 비교할 수 있습니다. `in` / `notIn`의 오른쪽은 배열입니다.
+
+해·스케줄 초안 예는 [MCP](./07-mcp.md)의 `describe_flow_schema` 「일몰 작업실 조명」입니다.
+
 ## Runtime이 받는 배포
 
 WSS 이름(예약 그대로):
 
 | 방향 | type |
 | --- | --- |
-| API → runtime | `desired.deployment`, `run.start`, `run.step`, `summary.ack`, `devices.create`, `devices.integrate` |
-| runtime → API | `hello`, `heartbeat`, `activation.result`, `summary.batch`, `run.summary`, `connections.snapshot`, `devices.snapshot`, `devices.created`, `devices.integrated` |
+| API → runtime | `desired.deployment`, `run.start`, `run.step`, `summary.ack`, `devices.create`, `devices.integrate`, `devices.action`, `devices.update`, `devices.delete` |
+| runtime → API | `hello`, `heartbeat`, `activation.result`, `summary.batch`, `run.summary`, `connections.snapshot`, `devices.snapshot`, `devices.created`, `devices.integrated`, `devices.acted`, `devices.updated`, `devices.deleted` |
 
 Runtime은 digest·노드 버전·HA connection binding을 검사한 뒤 `revision_artifacts`를 upsert합니다. 활성 포인터는 한 SQLite 트랜잭션입니다. 실패하면 이전 활성 revision을 유지합니다.
 

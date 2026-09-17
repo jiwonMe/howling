@@ -59,6 +59,34 @@
 }
 ```
 
+문자열·불리언은 `eq` / `in`으로 비교합니다. 숫자는 문자열 `"10"`으로 바꾸지 않습니다.
+
+```json
+{
+  "id": "weather",
+  "type": "core.condition",
+  "version": 1,
+  "config": { "operator": "in" },
+  "inputs": {
+    "left": { "kind": "output", "nodeId": "readWeather", "output": "value", "path": "/state" },
+    "right": { "kind": "literal", "value": ["cloudy", "rainy", "fog"] }
+  }
+}
+```
+
+```json
+{
+  "id": "sat",
+  "type": "core.condition",
+  "version": 1,
+  "config": { "operator": "eq" },
+  "inputs": {
+    "left": { "kind": "output", "nodeId": "input", "output": "value", "path": "/sit" },
+    "right": { "kind": "literal", "value": true }
+  }
+}
+```
+
 선택되지 않은 포트에 달린 엣지는 `skipped`가 되고, 그 하류는 skip으로 끝납니다.
 
 ## `analysis.rolling-mean`

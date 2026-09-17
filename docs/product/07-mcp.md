@@ -64,6 +64,72 @@ Effect 입력:
 
 값을 바꿀 때는 `act_device` `{ deviceId, action: "set_fields", data: { occupied: true, state: "cloudy", temperature: 18 } }`.
 
+방석처럼 불리언 필드가 켜지면 `device.changed`가 돕니다. 플로 초안 예:
+
+```json
+{
+  "name": "save_draft",
+  "arguments": {
+    "flowId": "FLOW_ID",
+    "draft": {
+      "expectedVersion": 1,
+      "definition": {
+        "schemaVersion": 1,
+        "id": "FLOW_ID",
+        "revision": "draft",
+        "entryNodeId": "input",
+        "nodes": [
+          { "id": "input", "type": "core.input", "version": 1, "config": {}, "inputs": {} },
+          {
+            "id": "sat",
+            "type": "core.condition",
+            "version": 1,
+            "config": { "operator": "eq" },
+            "inputs": {
+              "left": { "kind": "output", "nodeId": "input", "output": "value", "path": "/sit" },
+              "right": { "kind": "literal", "value": true }
+            }
+          },
+          {
+            "id": "light",
+            "type": "core.effect",
+            "version": 1,
+            "config": { "adapter": "device", "operation": "action" },
+            "inputs": {
+              "request": {
+                "kind": "literal",
+                "value": { "deviceId": "dev_studio_switch", "action": "turn_on" }
+              }
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "e-in-sat",
+            "source": { "nodeId": "input", "port": "success" },
+            "target": { "nodeId": "sat", "port": "in" }
+          },
+          {
+            "id": "e-sat-light",
+            "source": { "nodeId": "sat", "port": "true" },
+            "target": { "nodeId": "light", "port": "in" }
+          }
+        ]
+      },
+      "triggers": [
+        {
+          "id": "sit",
+          "kind": "device.changed",
+          "connectionId": "ha",
+          "config": { "deviceId": "dev_cushion", "inputKey": "sit" }
+        }
+      ],
+      "connections": [{ "id": "ha", "kind": "ha", "connectionId": "ha" }]
+    }
+  }
+}
+```
+
 `tools/list`는 각 tool의 설명과 JSON Schema `inputSchema`를 준다(`apps/api/src/mcp/catalog.ts`). 인자 검증은 dispatch의 zod가 하고, 실패하면 JSON-RPC `error.message`에 필드 요약, `error.data.error.issues[]`에 `{ path, message, code }`를 싣는다. 트리거는 `save_draft`·`create_flow`·`create_revision`에서 kind별 config를 검사한다(`triggerListSchema`).
 
 ### 플로 작성 순서
