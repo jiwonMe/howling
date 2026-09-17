@@ -2,7 +2,7 @@
  * 로컬 기기 표. entity_id는 이 SQLite에만 둔다.
  */
 import { createHash } from "node:crypto";
-import { looksLikeEntityId, readingOf, type DeviceKind } from "@howling/contracts";
+import { looksLikeEntityId, publicFieldsOf, readingOf, type DeviceKind } from "@howling/contracts";
 import type Database from "better-sqlite3";
 import { actionsOf, classifyEntity, displayNameOf } from "./classify.js";
 
@@ -166,6 +166,7 @@ export const summariesOf = (rows: readonly DeviceRow[]) =>
         row.origin === "virtual" || (isHelperEntity(row.entityId) && row.attrs.editable !== false),
       ...(row.state && !looksLikeEntityId(row.state) ? { state: row.state.slice(0, 64) } : {}),
       ...(reading && !looksLikeEntityId(reading) ? { reading } : {}),
+      ...(row.kind === "fields" ? { fields: publicFieldsOf(row.attrs) } : {}),
     };
   });
 

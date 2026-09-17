@@ -138,9 +138,27 @@ test("lists hub devices without entity ids", async ({ page, request }) => {
   expect(afterProduct).not.toContain("media_player.");
   expect(afterProduct).not.toContain("remote.");
 
+  await page.getByTestId("device-connect-virtual").click();
+  await page.getByTestId("device-kind").selectOption("fields");
+  await page.getByTestId("device-name").fill("E2E Room Env");
+  await page.getByTestId("device-field-key-0").fill("occupied");
+  await page.getByTestId("device-field-label-0").fill("재실");
+  await page.getByTestId("device-field-add").click();
+  await page.getByTestId("device-field-key-1").fill("state");
+  await page.getByTestId("device-field-type-1").selectOption("select");
+  await page.getByTestId("device-field-options-1").fill("sunny, cloudy");
+  await page.getByTestId("device-add").click();
+  await expect(page.getByTestId("device-list")).toContainText("E2E Room Env", { timeout: 60_000 });
+  await expect(page.getByTestId("device-row").filter({ hasText: "E2E Room Env" })).toContainText("여러 값");
+  await expect(page.getByTestId("device-row").filter({ hasText: "E2E Room Env" })).toHaveAttribute(
+    "data-origin",
+    "virtual",
+  );
+
   await page.getByRole("link", { name: "상태" }).click();
   await expect(page.getByTestId("device-group-ha")).toContainText("E2E Yaml Switch");
   await expect(page.getByTestId("device-group-virtual")).toContainText("E2E Living TV 리모컨");
+  await expect(page.getByTestId("device-group-virtual")).toContainText("E2E Room Env");
   await expect(page.getByTestId("device-group-ha")).not.toContainText("E2E Living TV");
   await page
     .getByTestId("device-dashboard-virtual")
@@ -149,4 +167,14 @@ test("lists hub devices without entity ids", async ({ page, request }) => {
     .click();
   await expect(page.getByTestId("device-dialog")).toContainText("가상");
   await expect(page.getByTestId("device-dialog")).toContainText("플로 시험용입니다.");
+  await page.getByTestId("device-dialog-close").click();
+  await page
+    .getByTestId("device-dashboard-virtual")
+    .locator('[data-testid="device-tile"]')
+    .filter({ hasText: "E2E Room Env" })
+    .click();
+  await expect(page.getByTestId("device-dialog")).toContainText("여러 값");
+  await page.getByTestId("device-act-state").selectOption("cloudy");
+  await page.getByTestId("device-act-run").click();
+  await expect(page.getByTestId("device-dialog")).toContainText("cloudy", { timeout: 20_000 });
 });

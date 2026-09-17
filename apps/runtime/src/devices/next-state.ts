@@ -1,6 +1,7 @@
 /**
  * 동작 뒤 로컬 상태. entity_id는 쓰지 않는다.
  */
+import { applyFieldData, fieldsFromAttrs, stateFromFields } from "@howling/contracts";
 import type Database from "better-sqlite3";
 import { getDevice, mapDeviceRow, type DeviceRow } from "./store.js";
 
@@ -28,6 +29,14 @@ export const nextDeviceState = (
   }
   if (action === "set_value" && data.value !== undefined) {
     return { state: String(data.value), attrs };
+  }
+  if (action === "set_fields") {
+    const fields = fieldsFromAttrs(row.attrs);
+    if (fields.length === 0) {
+      return { state: row.state, attrs: row.attrs };
+    }
+    const next = applyFieldData(row.attrs, fields, data);
+    return { state: stateFromFields(next, fields), attrs: next };
   }
   return { state: row.state || "on", attrs };
 };

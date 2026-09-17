@@ -221,6 +221,21 @@ export {
 export { productIdOf, productNameOf, productPartsOf } from "./device-products.js";
 export type { ProductPart } from "./device-products.js";
 export { parseVirtualDevicesYaml } from "./device-yaml.js";
+export {
+  FIELDS_ATTR,
+  actionFieldsOf,
+  applyFieldData,
+  fieldsFromAttrs,
+  initialAttrsOf,
+  publicFieldsOf,
+  readingFromFields,
+  stateFromFields,
+  valueAttrsOf,
+  virtualFieldSchema,
+  virtualFieldStateSchema,
+  virtualFieldsSchema,
+} from "./device-virtual-fields.js";
+export type { VirtualField, VirtualFieldState, VirtualFieldType } from "./device-virtual-fields.js";
 export type {
   CreatableDeviceKind,
   DeviceAction,

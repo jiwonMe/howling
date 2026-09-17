@@ -55,6 +55,9 @@ describe.skipIf(!postgresUp)("phase 6 mcp act_device", () => {
       expect(act?.inputSchema.required).toEqual(["deviceId", "action"]);
       expect(Object.keys(act?.inputSchema.properties ?? {})).toContain("data");
       expect(act?.description).toContain("run");
+      const create = tools.find((item) => item.name === "create_device");
+      expect(Object.keys(create?.inputSchema.properties ?? {})).toContain("fields");
+      expect(create?.description).toContain("fields");
       for (const tool of tools) {
         expect(tool.inputSchema).toHaveProperty("type", "object");
         expect(tool.inputSchema.properties).toBeDefined();

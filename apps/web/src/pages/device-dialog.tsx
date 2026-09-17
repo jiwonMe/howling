@@ -2,6 +2,7 @@
  * 대시보드에서 기기를 켜고 끈다. entity_id는 없다.
  */
 import {
+  actionFieldsOf,
   actionLabel,
   DEVICE_KIND_LABELS,
   fieldsOf,
@@ -23,6 +24,13 @@ import { DeviceManage } from "./device-manage.js";
 
 const QUICK = ["turn_on", "turn_off", "toggle", "media_play", "media_pause", "media_stop"] as const;
 
+const valuesOf = (device: DeviceSummary): Record<string, string | number | boolean> =>
+  Object.fromEntries(
+    (device.fields ?? []).flatMap((item) =>
+      item.value === undefined ? [] : [[item.key, item.value]],
+    ),
+  );
+
 export const DeviceDialog = (props: {
   readonly device: DeviceSummary;
   readonly siteId: string;
@@ -33,7 +41,9 @@ export const DeviceDialog = (props: {
 }) => {
   const ref = useRef<HTMLDialogElement>(null);
   const [action, setAction] = useState<DeviceAction>(props.device.actions[0] ?? "");
-  const [data, setData] = useState<Record<string, string | number | boolean>>({});
+  const [data, setData] = useState<Record<string, string | number | boolean>>(() =>
+    valuesOf(props.device),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -79,7 +89,8 @@ export const DeviceDialog = (props: {
     if (!action) {
       return;
     }
-    const listed = fieldsOf(props.device.kind, action);
+    const listed =
+      props.device.kind === "fields" ? actionFieldsOf(props.device.fields) : fieldsOf(props.device.kind, action);
     const missing = listed.some((item) => item.required && data[item.key] === undefined);
     if (missing) {
       setError("값을 넣어 주세요.");
@@ -143,6 +154,9 @@ export const DeviceDialog = (props: {
               data={data}
               kind={props.device.kind}
               testIdPrefix="device-act"
+              {...(props.device.kind === "fields"
+                ? { extraFields: actionFieldsOf(props.device.fields) }
+                : {})}
               onData={setData}
             />
             <button

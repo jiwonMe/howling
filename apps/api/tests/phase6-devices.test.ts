@@ -81,6 +81,20 @@ describe.skipIf(!postgresUp)("phase 6 devices", () => {
           available: true,
           origin: "virtual",
         },
+        {
+          id: "dev_env",
+          name: "작업실 환경",
+          kind: "fields",
+          actions: ["set_fields"],
+          numeric: false,
+          available: true,
+          origin: "virtual",
+          state: "sunny",
+          fields: [
+            { key: "occupied", type: "boolean", label: "재실", value: false },
+            { key: "state", type: "select", options: ["sunny", "cloudy"], value: "sunny" },
+          ],
+        },
       ]);
       const withVirtual = await ctx.app.inject({
         url: `/api/v1/sites/${siteId}/devices`,
@@ -89,6 +103,12 @@ describe.skipIf(!postgresUp)("phase 6 devices", () => {
       expect(
         withVirtual.json().devices.find((item: { id: string }) => item.id === "dev_tv").origin,
       ).toBe("virtual");
+      const env = withVirtual.json().devices.find((item: { id: string }) => item.id === "dev_env") as {
+        kind: string;
+        fields: { key: string }[];
+      };
+      expect(env.kind).toBe("fields");
+      expect(env.fields.map((item) => item.key)).toEqual(["occupied", "state"]);
       expect(JSON.stringify(listed.json())).not.toContain("input_number");
       expect(JSON.stringify(listed.json())).not.toContain("entityId");
 

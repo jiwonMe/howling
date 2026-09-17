@@ -41,6 +41,26 @@ input_number:
     expect(parseVirtualDevicesYaml("- name: 조명\n  kind: light")).toEqual([
       { name: "조명", kind: "light" },
     ]);
+    expect(
+      parseVirtualDevicesYaml(`
+- name: 작업실 환경
+  fields:
+    - key: occupied
+      type: boolean
+      label: 재실
+    - key: state
+      type: select
+      options: [sunny, cloudy, rainy]
+`),
+    ).toEqual([
+      {
+        name: "작업실 환경",
+        fields: [
+          { key: "occupied", type: "boolean", label: "재실" },
+          { key: "state", type: "select", options: ["sunny", "cloudy", "rainy"] },
+        ],
+      },
+    ]);
     expect(JSON.stringify(parseVirtualDevicesYaml("- name: 스위치\n  kind: switch"))).not.toContain(
       "input_boolean",
     );
@@ -53,6 +73,9 @@ input_number:
     expect(() => parseVirtualDevicesYaml("- name: TV\n  product: Apple TV\n  kind: player")).toThrow(
       "함께 넣을 수 없습니다",
     );
+    expect(() =>
+      parseVirtualDevicesYaml("- name: 환경\n  kind: boolean\n  fields:\n    - key: a\n      type: number"),
+    ).toThrow("함께 넣을 수 없습니다");
     const many = Array.from({ length: 33 }, (_, index) => `- name: 스위치 ${index}\n  kind: boolean`).join(
       "\n",
     );

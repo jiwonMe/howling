@@ -83,4 +83,5 @@ export const HOME_SERVICES = {
   ],
   air: [],
   weather: [],
+  fields: [{ action: "set_fields" }],
 } as const satisfies Record<string, readonly DeviceService[]>;

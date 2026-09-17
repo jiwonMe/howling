@@ -13,11 +13,17 @@ const EXAMPLE = `- name: 작업실 TV
   product: Apple TV
 - name: 시험 스위치
   kind: boolean
-- name: 시험 전력
-  kind: number
-  min: 0
-  max: 10000
-  step: 1
+- name: 작업실 환경
+  fields:
+    - key: occupied
+      type: boolean
+      label: 재실
+    - key: state
+      type: select
+      options: [sunny, cloudy, rainy]
+    - key: temperature
+      type: number
+      label: 온도
 `;
 
 export const DeviceCreateYaml = (props: {
@@ -70,7 +76,7 @@ export const DeviceCreateYaml = (props: {
   return (
     <form className={formStack} data-testid="device-create-yaml" onSubmit={submit}>
       <p className={caption}>가상 기기 YAML</p>
-      <p className={caption}>이름과 종류를 YAML로 여러 개 넣을 수 있습니다. 제품은 Apple TV처럼, 스위치는 boolean, 숫자는 number입니다.</p>
+      <p className={caption}>이름과 종류를 YAML로 여러 개 넣을 수 있습니다. 제품은 Apple TV처럼, 스위치는 boolean, 여러 값은 fields입니다.</p>
       <label className={field}>
         <span className={label}>YAML</span>
         <textarea

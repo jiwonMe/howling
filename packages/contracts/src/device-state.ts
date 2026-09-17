@@ -1,6 +1,8 @@
 /**
  * 기기 현재값. entity_id는 여기에 없다.
  */
+import { fieldsFromAttrs, readingFromFields } from "./device-virtual-fields.js";
+
 export const looksLikeEntityId = (value: string): boolean =>
   /^[a-z][a-z0-9_]+\.[a-z0-9_]+$/i.test(value.trim());
 
@@ -103,6 +105,9 @@ export const readingOf = (
   }
   if (kind === "fan" && typeof attrs.percentage === "number") {
     return `${attrs.percentage}%`;
+  }
+  if (kind === "fields") {
+    return readingFromFields(attrs, fieldsFromAttrs(attrs));
   }
   return undefined;
 };

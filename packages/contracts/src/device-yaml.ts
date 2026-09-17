@@ -96,8 +96,12 @@ const itemOf = (item: unknown): DeviceCreateBody => {
   const row = item as Record<string, unknown>;
   const productRaw = String(row.product ?? "").trim();
   const kindRaw = String(row.kind ?? "").trim();
+  const fields = Array.isArray(row.fields) ? row.fields : undefined;
   if (productRaw && kindRaw) {
     throw new Error("제품과 종류를 함께 넣을 수 없습니다.");
+  }
+  if (fields && (productRaw || kindRaw)) {
+    throw new Error("필드와 종류·제품을 함께 넣을 수 없습니다.");
   }
   const product = productRaw ? productIdOf(productRaw) : undefined;
   if (productRaw && !product) {
@@ -111,6 +115,7 @@ const itemOf = (item: unknown): DeviceCreateBody => {
     name: row.name,
     ...(product ? { product } : {}),
     ...(kind ? { kind } : {}),
+    ...(fields ? { fields } : {}),
     ...(typeof row.min === "number" ? { min: row.min } : {}),
     ...(typeof row.max === "number" ? { max: row.max } : {}),
     ...(typeof row.step === "number" ? { step: row.step } : {}),

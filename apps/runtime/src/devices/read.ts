@@ -1,7 +1,7 @@
 /**
  * core.effect adapter "device" operation "read". entity_id는 나가지 않는다.
  */
-import { looksLikeEntityId, readingOf } from "@howling/contracts";
+import { looksLikeEntityId, publicFieldsOf, readingOf, valueAttrsOf } from "@howling/contracts";
 import type { JsonValue } from "@howling/core";
 import type Database from "better-sqlite3";
 import { getDevice, type DeviceRow } from "./store.js";
@@ -36,6 +36,7 @@ const publicState = (state: string): string =>
 export const deviceValueOf = (row: DeviceRow): JsonValue => {
   const state = publicState(row.state);
   const reading = readingOf(row.kind, row.attrs);
+  const fields = row.kind === "fields" ? publicFieldsOf(row.attrs) : [];
   return {
     id: row.id,
     name: row.name,
@@ -45,7 +46,18 @@ export const deviceValueOf = (row: DeviceRow): JsonValue => {
     value: valueOf(state),
     on: onOf(state),
     ...(reading && !looksLikeEntityId(reading) ? { reading } : {}),
-    attrs: row.attrs,
+    attrs: valueAttrsOf(row.attrs),
+    ...(fields.length > 0
+      ? {
+          fields: fields.map((item) => ({
+            key: item.key,
+            type: item.type,
+            ...(item.label ? { label: item.label } : {}),
+            ...(item.options ? { options: [...item.options] } : {}),
+            ...(item.value === undefined ? {} : { value: item.value }),
+          })),
+        }
+      : {}),
   };
 };
 

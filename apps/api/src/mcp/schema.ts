@@ -68,7 +68,9 @@ const effects = {
         on: false,
         attrs: {},
       },
-      note: "현재 상태를 읽는다. state는 문자열, value는 숫자 state일 때 number, on은 on/off류일 때 boolean.",
+      note:
+        "현재 상태를 읽는다. state는 문자열, value는 숫자 state일 때 number, on은 on/off류일 때 boolean. " +
+        "여러 값 가상 기기(kind=fields)는 attrs에 필드 값, fields에 스키마가 있다. path 예: /state, /attrs/temperature.",
     },
     {
       adapter: "mcp",

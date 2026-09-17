@@ -170,6 +170,25 @@ describe("device catalog contracts", () => {
     expect(deviceCreateBodySchema.safeParse({ name: "TV", kind: "player", product: "apple_tv" }).success).toBe(
       false,
     );
+    expect(
+      deviceCreateBodySchema.parse({
+        name: "작업실 환경",
+        fields: [
+          { key: "occupied", type: "boolean", label: "재실" },
+          { key: "state", type: "select", options: ["sunny", "cloudy"] },
+        ],
+      }).fields?.[1]?.key,
+    ).toBe("state");
+    expect(deviceCreateBodySchema.safeParse({ name: "빈", kind: "fields" }).success).toBe(false);
+    expect(
+      deviceCreateBodySchema.safeParse({
+        name: "겹침",
+        fields: [
+          { key: "a", type: "number" },
+          { key: "a", type: "boolean" },
+        ],
+      }).success,
+    ).toBe(false);
     expect(() =>
       deviceCreateResultSchema.parse({
         requestId: "req_1",

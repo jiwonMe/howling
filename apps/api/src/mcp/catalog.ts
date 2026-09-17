@@ -88,12 +88,28 @@ const TOOL_DOCS: Readonly<Record<keyof typeof MCP_TOOL_SCOPES, ToolDoc>> = {
   },
   create_device: {
     description:
-      "기기를 추가한다. 시험용 가상 기기는 kind만(number 또는 boolean 등), 집 기기는 product만 준다.",
+      "기기를 추가한다. 시험용 가상은 kind만(number·boolean·light 등) 또는 fields(여러 값 한 대). " +
+      "집 기기는 product만. kind·product·fields는 같이 쓰지 않는다.",
     inputSchema: obj(
       {
         name: str("기기 이름"),
-        kind: str("가상 기기 종류. number, boolean, light, switch 등. product와 같이 쓰지 않는다."),
-        product: str("집 기기 제품군 이름. kind와 같이 쓰지 않는다."),
+        kind: str("가상 기기 종류. number, boolean, light, switch 등. product·fields와 같이 쓰지 않는다."),
+        product: str("집 기기 제품군 이름. kind·fields와 같이 쓰지 않는다."),
+        fields: {
+          type: "array",
+          description:
+            "여러 값 가상 기기. [{ key, type: boolean|number|text|select, label?, options? }]. " +
+            "key=state 필드는 device.read의 /state가 된다. 예: 날씨 state + 온도.",
+          items: {
+            type: "object",
+            properties: {
+              key: str("필드 키. 점과 entity_id는 불가"),
+              type: str("boolean | number | text | select"),
+              label: str("화면 이름"),
+              options: { type: "array", items: { type: "string" }, description: "select일 때 두 개 이상" },
+            },
+          },
+        },
         min: { type: "number", description: "number 기기 최소값" },
         max: { type: "number", description: "number 기기 최대값" },
         step: { type: "number", description: "number 기기 단위" },

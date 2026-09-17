@@ -46,6 +46,24 @@ Effect 입력:
 { "name": "act_device", "arguments": { "deviceId": "dev_light", "action": "turn_on", "data": { "brightness_pct": 70 } } }
 ```
 
+`create_device`는 시험용 가상 기기를 만든다. `kind` 또는 `product` 또는 `fields` 중 하나만 준다. 여러 값 한 대는 `fields`다. `key: state` 필드는 `device.read`의 `/state`가 된다.
+
+```json
+{
+  "name": "create_device",
+  "arguments": {
+    "name": "작업실 환경",
+    "fields": [
+      { "key": "occupied", "type": "boolean", "label": "재실" },
+      { "key": "state", "type": "select", "options": ["sunny", "cloudy", "rainy"] },
+      { "key": "temperature", "type": "number", "label": "온도" }
+    ]
+  }
+}
+```
+
+값을 바꿀 때는 `act_device` `{ deviceId, action: "set_fields", data: { occupied: true, state: "cloudy", temperature: 18 } }`.
+
 `tools/list`는 각 tool의 설명과 JSON Schema `inputSchema`를 준다(`apps/api/src/mcp/catalog.ts`). 인자 검증은 dispatch의 zod가 하고, 실패하면 JSON-RPC `error.message`에 필드 요약, `error.data.error.issues[]`에 `{ path, message, code }`를 싣는다. 트리거는 `save_draft`·`create_flow`·`create_revision`에서 kind별 config를 검사한다(`triggerListSchema`).
 
 ### 플로 작성 순서

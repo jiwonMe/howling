@@ -1,7 +1,13 @@
 /**
  * Effect를 Howling 기기로 고른다. entity_id는 저장하지 않는다.
  */
-import { actionLabel, originOf, type DeviceAction, type DeviceSummary } from "@howling/contracts";
+import {
+  actionFieldsOf,
+  actionLabel,
+  originOf,
+  type DeviceAction,
+  type DeviceSummary,
+} from "@howling/contracts";
 import type { JsonValue, WorkflowDefinition } from "@howling/core";
 import { field, label, select } from "../ui/form.css.js";
 import { DeviceActionFields } from "./device-action-fields.js";
@@ -98,6 +104,7 @@ export const DeviceFields = (props: {
         action={request.action}
         data={request.data}
         {...(chosen ? { kind: chosen.kind } : {})}
+        {...(chosen?.kind === "fields" ? { extraFields: actionFieldsOf(chosen.fields) } : {})}
         onData={(data) => set({ data })}
       />
     </>

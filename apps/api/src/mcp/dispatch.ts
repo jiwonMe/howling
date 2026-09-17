@@ -77,7 +77,7 @@ const invoke = async (
     const parsed = deviceCreateBodySchema.safeParse(args);
     return parsed.success
       ? createDeviceFor(pool, actor, parsed.data)
-      : invalid("name and kind or product required", parsed.error);
+      : invalid("name and kind or product or fields required", parsed.error);
   }
   if (name === "update_device") {
     const deviceId = String(args.deviceId ?? "");

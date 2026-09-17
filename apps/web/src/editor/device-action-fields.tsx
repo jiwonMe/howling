@@ -9,9 +9,15 @@ export const DeviceActionFields = (props: {
   readonly action: DeviceAction | "";
   readonly data: Record<string, string | number | boolean>;
   readonly onData: (data: Record<string, string | number | boolean>) => void;
+  readonly extraFields?: readonly DeviceActionField[];
   readonly testIdPrefix?: string;
 }) => {
-  const listed = props.kind && props.action ? fieldsOf(props.kind, props.action) : [];
+  const listed =
+    props.extraFields && props.extraFields.length > 0
+      ? props.extraFields
+      : props.kind && props.action
+        ? fieldsOf(props.kind, props.action)
+        : [];
   if (listed.length === 0) {
     return null;
   }

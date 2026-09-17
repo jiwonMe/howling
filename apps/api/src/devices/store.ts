@@ -34,8 +34,8 @@ export const upsertSiteDevice = async (
 ): Promise<void> => {
   await pool.query(
     `INSERT INTO site_devices
-       (site_id, id, name, kind, actions_json, numeric, available, state, reading, origin, deletable, updated_at)
-     VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11, now())
+       (site_id, id, name, kind, actions_json, numeric, available, state, reading, origin, deletable, fields_json, updated_at)
+     VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11, $12::jsonb, now())
      ON CONFLICT (site_id, id) DO UPDATE SET
        name = EXCLUDED.name,
        kind = EXCLUDED.kind,
@@ -46,6 +46,7 @@ export const upsertSiteDevice = async (
        reading = EXCLUDED.reading,
        origin = EXCLUDED.origin,
        deletable = EXCLUDED.deletable,
+       fields_json = EXCLUDED.fields_json,
        updated_at = now()`,
     [
       siteId,
@@ -59,6 +60,7 @@ export const upsertSiteDevice = async (
       item.reading ?? null,
       item.origin === "virtual" ? "virtual" : "ha",
       item.deletable === true,
+      item.fields ? JSON.stringify(item.fields) : null,
     ],
   );
 };
@@ -78,8 +80,9 @@ export const listSiteDevices = async (
     reading: string | null;
     origin: string | null;
     deletable: boolean | null;
+    fields_json: unknown;
   }>(
-    `SELECT id, name, kind, actions_json, numeric, available, state, reading, origin, deletable
+    `SELECT id, name, kind, actions_json, numeric, available, state, reading, origin, deletable, fields_json
      FROM site_devices WHERE site_id = $1 ORDER BY name`,
     [siteId],
   );
@@ -94,6 +97,9 @@ export const listSiteDevices = async (
     deletable: row.deletable === true,
     ...(row.state ? { state: row.state } : {}),
     ...(row.reading ? { reading: row.reading } : {}),
+    ...(Array.isArray(row.fields_json)
+      ? { fields: row.fields_json as NonNullable<DeviceSummary["fields"]> }
+      : {}),
   }));
 };
 

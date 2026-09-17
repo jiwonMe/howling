@@ -1,5 +1,5 @@
 /**
- * 플로 시험용 가상 스위치·숫자. 집 기기가 아니다.
+ * 플로 시험용 가상 스위치·숫자·여러 값. 집 기기가 아니다.
  */
 import { DEVICE_INTEGRATIONS, type HelperDeviceKind, type DeviceSummary } from "@howling/contracts";
 import { useState, type FormEvent } from "react";
@@ -8,6 +8,7 @@ import { createDevice } from "../lib/devices-api.js";
 import { buttonRecipe } from "../ui/button.css.js";
 import { errorText, field, formStack, input, label, select } from "../ui/form.css.js";
 import { caption } from "../ui/layout.css.js";
+import { DeviceCreateFields, emptyField, fieldsOfDrafts, type FieldDraft } from "./device-create-fields.js";
 import { DeviceCreateYaml } from "./device-create-yaml.js";
 
 export const DeviceCreateForm = (props: {
@@ -18,8 +19,9 @@ export const DeviceCreateForm = (props: {
   readonly onBack: () => void;
 }) => {
   const [name, setName] = useState("");
-  const [kind, setKind] = useState<HelperDeviceKind>("boolean");
+  const [kind, setKind] = useState<HelperDeviceKind | "fields">("boolean");
   const [product, setProduct] = useState("");
+  const [drafts, setDrafts] = useState<FieldDraft[]>([emptyField()]);
   const [yaml, setYaml] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -46,12 +48,17 @@ export const DeviceCreateForm = (props: {
     if (!trimmed || busy || !props.ready) {
       return;
     }
+    const fields = kind === "fields" ? fieldsOfDrafts(drafts) : undefined;
+    if (kind === "fields" && (fields?.length ?? 0) === 0) {
+      setError("필드를 한 개 이상 넣어 주세요.");
+      return;
+    }
     setBusy(true);
     setError(undefined);
     void createDevice(
       props.siteId,
       props.csrf,
-      product ? { name: trimmed, product } : { name: trimmed, kind },
+      product ? { name: trimmed, product } : fields ? { name: trimmed, fields } : { name: trimmed, kind },
     )
       .then((devices) => {
         setName("");
@@ -109,12 +116,16 @@ export const DeviceCreateForm = (props: {
             data-testid="device-kind"
             name="kind"
             value={kind}
-            onChange={(event) => setKind(event.target.value as HelperDeviceKind)}
+            onChange={(event) => setKind(event.target.value as HelperDeviceKind | "fields")}
           >
             <option value="boolean">스위치 (켜기/끄기)</option>
             <option value="number">숫자 (전력, 온도)</option>
+            <option value="fields">여러 값 (스위치·숫자·글자를 함께)</option>
           </select>
         </label>
+      )}
+      {product || kind !== "fields" ? null : (
+        <DeviceCreateFields drafts={drafts} onDrafts={setDrafts} />
       )}
       <button
         className={buttonRecipe({ intent: "primary" })}

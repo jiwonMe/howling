@@ -47,11 +47,11 @@ HA get_states / state_changed
 - `POST /api/v1/sites/:siteId/devices/:deviceId/actions` `{ action, data? }`. 응답 `{ device }`. `entity_id` 없음
 - `PATCH /api/v1/sites/:siteId/devices/:deviceId` `{ name }`. 응답 `{ device }`
 - `DELETE /api/v1/sites/:siteId/devices/:deviceId`. 가상과 시험 스위치·숫자만. 그 외 집 기기는 거절. 응답 `{ deviceId }`
-- `POST /api/v1/sites/:siteId/devices` `{ name, kind? }` 또는 `{ name, product }`. `boolean`/`number`만 HA helper. 그 외와 제품은 runtime 가상. YAML은 화면에서 풀어 이 API를 여러 번 호출합니다. 응답 `{ device, devices }`
+- `POST /api/v1/sites/:siteId/devices` `{ name, kind? }` 또는 `{ name, product }` 또는 `{ name, fields }`. `boolean`/`number`만 HA helper. 그 외·제품·여러 값(`fields`)은 runtime 가상. YAML은 화면에서 풀어 이 API를 여러 번 호출합니다. 응답 `{ device, devices }`
 - `POST /api/v1/sites/:siteId/devices/integrations` `{ integration?, token?, values?, list? }`
 - WSS `devices.integrate` → `devices.integrated`. 허용 목록 밖의 통합·`entity_id`·HA `flow_id`·접속 키는 클라우드에 없음
 - 허용 목록은 `@howling/contracts` `DEVICE_INTEGRATIONS`. UI는 제품 이름만 보여 줍니다.
-- MCP `list_devices` (`read`), `act_device` (`run`), `create_device`·`update_device`·`delete_device` (`edit`). 응답은 summary만. `act_device` `{ deviceId, action, data? }`는 대시보드와 같은 `devices.action` 경로
+- MCP `list_devices` (`read`), `act_device` (`run`), `create_device`·`update_device`·`delete_device` (`edit`). 응답은 summary만. `create_device`는 `{ name, kind }`, `{ name, product }`, `{ name, fields }` 중 하나. `act_device` `{ deviceId, action, data? }`는 대시보드와 같은 `devices.action` 경로. 여러 값 가상은 `action: "set_fields"`
 - WSS `devices.create` → `devices.created`. WSS `devices.action` → `devices.acted`. WSS `devices.update` → `devices.updated`. WSS `devices.delete` → `devices.deleted`. 모두 `entity_id` 없음
 
 숫자 helper 기본값: min 0, max 10000, step 1. 이미 같은 이름이 있으면 그 기기를 돌려줍니다.
@@ -63,12 +63,20 @@ HA get_states / state_changed
   product: Apple TV
 - name: 시험 스위치
   kind: boolean
-- name: 시험 전력
-  kind: number
-  min: 0
-  max: 10000
-  step: 1
+- name: 작업실 환경
+  fields:
+    - key: occupied
+      type: boolean
+      label: 재실
+    - key: state
+      type: select
+      options: [sunny, cloudy, rainy]
+    - key: temperature
+      type: number
+      label: 온도
 ```
+
+여러 값 가상 기기는 한 대입니다. `kind`는 `fields`. 동작은 `set_fields`이고 `data`에 필드 키를 넣습니다. `key: state` 필드는 `device.read`의 `/state`가 됩니다. 나머지 값은 `/attrs/<key>`입니다. 대시보드 대화상자에서 각 필드를 바로 바꿀 수 있습니다.
 
 `device.changed` 트리거와 `adapter: "device"` Effect는 허브(`ha`) connection이 필요합니다. 미등록 device는 배포를 실패로 보지 않습니다. 나중에 같은 id로 나타나면 그때 실행됩니다.
 

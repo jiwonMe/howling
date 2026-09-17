@@ -45,7 +45,7 @@ export const migratePostgres = async (
 
 export const migrationsReady = async (
   pool: pg.Pool,
-  version = "0009_device_deletable",
+  version = "0010_device_fields",
 ): Promise<boolean> => {
   try {
     const result = await pool.query(

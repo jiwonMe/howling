@@ -3,14 +3,17 @@
  */
 import { randomUUID } from "node:crypto";
 import {
+  initialAttrsOf,
   isHelperCreate,
   productIdOf,
   productNameOf,
   productPartsOf,
+  stateFromFields,
   type DeviceCreateRequest,
   type DeviceKind,
   type DeviceSummary,
   type ProductPart,
+  type VirtualField,
 } from "@howling/contracts";
 import type Database from "better-sqlite3";
 import { deviceIdOf, listDevices, mapDeviceRow, summariesOf, type DeviceRow } from "./store.js";
@@ -25,12 +28,21 @@ export const createVirtualDevices = (
     throw new Error("종류 또는 제품이 필요합니다.");
   }
   const rows = parts.map((part) =>
-    upsertVirtual(db, runtimeId, productNameOf(payload.name, part.suffix), part),
+    upsertVirtual(
+      db,
+      runtimeId,
+      productNameOf(payload.name, part.suffix),
+      part,
+      part.kind === "fields" ? payload.fields : undefined,
+    ),
   );
   return summariesOf(rows);
 };
 
 const partsOf = (payload: DeviceCreateRequest): readonly ProductPart[] => {
+  if (payload.fields && payload.fields.length > 0) {
+    return [{ kind: "fields", suffix: "" }];
+  }
   if (payload.product) {
     const parts = productPartsOf(payload.product);
     if (!parts || !productIdOf(payload.product)) {
@@ -49,6 +61,7 @@ const upsertVirtual = (
   runtimeId: string,
   name: string,
   part: ProductPart,
+  fields?: readonly VirtualField[],
 ): DeviceRow => {
   const existing = listDevices(db).find(
     (row) => row.origin === "virtual" && row.name === name && row.kind === part.kind && row.available,
@@ -60,11 +73,13 @@ const upsertVirtual = (
   const id = deviceIdOf(runtimeId, entityId);
   const now = new Date().toISOString();
   const numeric = part.numeric === true || part.kind === "number" ? 1 : 0;
+  const attrs = fields && fields.length > 0 ? initialAttrsOf(fields) : {};
+  const state = fields && fields.length > 0 ? stateFromFields(attrs, fields) : stateOf(part.kind);
   db.prepare(
     `INSERT INTO devices
        (id, entity_id, name, kind, numeric, available, updated_at, origin, state, attrs_json)
-     VALUES (?, ?, ?, ?, ?, 1, ?, 'virtual', ?, '{}')`,
-  ).run(id, entityId, name, part.kind, numeric, now, stateOf(part.kind));
+     VALUES (?, ?, ?, ?, ?, 1, ?, 'virtual', ?, ?)`,
+  ).run(id, entityId, name, part.kind, numeric, now, state, JSON.stringify(attrs));
   const row = db.prepare(`SELECT * FROM devices WHERE id = ?`).get(id) as Record<string, unknown>;
   return mapDeviceRow(row);
 };

@@ -3,6 +3,7 @@
  */
 import { z } from "zod";
 import { looksLikeEntityId } from "./device-state.js";
+import { virtualFieldStateSchema, virtualFieldsSchema } from "./device-virtual-fields.js";
 
 const publicTextSchema = z
   .string()
@@ -36,6 +37,7 @@ export const deviceKindSchema = z.enum([
   "alarm",
   "air",
   "weather",
+  "fields",
 ]);
 
 export const deviceActionSchema = z.string().min(1).max(64);
@@ -66,6 +68,7 @@ export const DEVICE_KIND_LABELS: Readonly<Record<z.infer<typeof deviceKindSchema
   alarm: "경보",
   air: "공기",
   weather: "날씨",
+  fields: "여러 값",
 };
 
 export const DEVICE_ACTION_LABELS: Readonly<Record<string, string>> = {
@@ -82,6 +85,7 @@ export const DEVICE_ACTION_LABELS: Readonly<Record<string, string>> = {
   pause: "일시정지",
   dock: "복귀",
   set_value: "값 설정",
+  set_fields: "값 설정",
   volume_up: "볼륨 올리기",
   volume_down: "볼륨 내리기",
   volume_set: "볼륨",
@@ -147,6 +151,7 @@ export const deviceSummarySchema = z
     reading: publicTextSchema.optional(),
     origin: deviceOriginSchema.optional(),
     deletable: z.boolean().optional(),
+    fields: z.array(virtualFieldStateSchema).max(16).optional(),
   })
   .strict();
 
@@ -197,18 +202,29 @@ export const creatableDeviceKindSchema = deviceKindSchema;
 const hasCreateTarget = (body: {
   readonly kind?: string | undefined;
   readonly product?: string | undefined;
-}): boolean => Boolean(body.kind) !== Boolean(body.product) && Boolean(body.kind ?? body.product);
+  readonly fields?: readonly unknown[] | undefined;
+}): boolean => {
+  const hasFields = (body.fields?.length ?? 0) > 0;
+  if (hasFields) {
+    return !body.product && (body.kind === undefined || body.kind === "fields");
+  }
+  if (body.kind === "fields") {
+    return false;
+  }
+  return Boolean(body.kind) !== Boolean(body.product) && Boolean(body.kind ?? body.product);
+};
 
 export const deviceCreateBodySchema = z
   .object({
     name: z.string().trim().min(1).max(64),
     kind: deviceKindSchema.optional(),
     product: z.string().trim().min(1).max(64).optional(),
+    fields: virtualFieldsSchema.optional(),
     min: z.number().optional(),
     max: z.number().optional(),
     step: z.number().positive().optional(),
   })
-  .refine(hasCreateTarget, "종류 또는 제품이 필요합니다.");
+  .refine(hasCreateTarget, "종류 또는 제품 또는 필드가 필요합니다.");
 
 export const deviceCreateRequestSchema = deviceCreateBodySchema.and(
   z.object({ requestId: z.string().min(1) }),

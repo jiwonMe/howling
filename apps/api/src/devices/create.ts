@@ -59,7 +59,7 @@ export const createSiteDevice = async (
     return {
       ok: false,
       status: 400,
-      body: errorBody(errorCodes.invalidRequest, "이름과 종류가 필요합니다."),
+      body: errorBody(errorCodes.invalidRequest, "이름과 종류 또는 필드가 필요합니다."),
     };
   }
   if (!runtimeBySite(siteId)) {
