@@ -7,7 +7,7 @@ import { OPERATOR_LABELS } from "../lib/node-meta.js";
 import { field, label, select } from "../ui/form.css.js";
 import { muted } from "../ui/editor.css.js";
 import { EffectFields, type McpToolOption } from "./effect-fields.js";
-import { NumberField, TextField, literalNumber, pathOf } from "./field-inputs.js";
+import { NumberField, TextField, formatLiteral, parseLiteral, pathOf } from "./field-inputs.js";
 import { JoinFields } from "./join-fields.js";
 import { MapFields } from "./map-fields.js";
 
@@ -103,12 +103,19 @@ export const NodeFields = (props: {
             </select>
           </label>
           {needsRight ? (
-            <NumberField
+            <TextField
               label="비교값"
               testId="bind-right"
-              value={literalNumber(node.inputs.right)}
-              onChange={(value) => setInput("right", { kind: "literal", value })}
+              value={formatLiteral(
+                node.inputs.right?.kind === "literal" ? node.inputs.right.value : undefined,
+              )}
+              onChange={(value) =>
+                setInput("right", { kind: "literal", value: parseLiteral(value) })
+              }
             />
+          ) : null}
+          {needsRight && (operator === "eq" || operator === "neq") ? (
+            <p className={muted}>숫자는 숫자로, 그 외는 글자 그대로 비교합니다. 예: off, cloudy, 1000</p>
           ) : null}
           {isList ? (
             <TextField

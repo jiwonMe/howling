@@ -10,7 +10,7 @@
 - 오른쪽: 노드를 고르면 그 노드만. 캔버스를 비우거나 「플로 설정」을 누르면 시험 입력·자동 실행(기기 trigger). 「고급: HA entity」는 예전 `entity_id` 입력
 - 위: 저장·검증 | Revision·배포·해제·되돌리기 | 시험·실행 | 원본 보관(`captureRaw`). 버튼마다 툴팁이 있습니다
 - Effect adapter는 기본 `device` / `action`. `homeassistant`는 「고급 (HA 서비스)」, `mcp`면 로컬에서 발견한 connection·tool을 고른다
-- Map은 필드 이름과 값 출처. Delay는 `durationMs`(ms). All/Any는 `inputNames`와 이름별 값. Condition은 「비교 방법」(`operator`)과 「비교값」(`right`)
+- Map은 필드 이름과 값 출처. Delay는 `durationMs`(ms). All/Any는 `inputNames`와 이름별 값. Condition은 「비교 방법」(`operator`)과 「비교값」(`right`). 비교값은 숫자로 읽히면 number, `true`/`false`/`null`은 그 값, 그 외는 문자열로 저장한다(예: `off`, `cloudy`, `1000`). `in`/`notIn`은 쉼표로 나눈 목록
 
 ## 노드
 

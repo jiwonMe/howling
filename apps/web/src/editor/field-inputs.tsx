@@ -42,9 +42,6 @@ export const NumberField = (props: {
 export const pathOf = (binding?: InputBinding): string =>
   binding && "path" in binding && typeof binding.path === "string" ? binding.path : "";
 
-export const literalNumber = (binding?: InputBinding): number =>
-  binding && binding.kind === "literal" && typeof binding.value === "number" ? binding.value : 0;
-
 export const parseLiteral = (raw: string): string | number | boolean | null => {
   const trimmed = raw.trim();
   if (trimmed === "true") {

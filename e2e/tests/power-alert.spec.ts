@@ -64,6 +64,10 @@ test("builds a mean flow and turns on the HA helper once", async ({ page, reques
   await page.getByTestId("deploy-flow").click();
   await expect(page.locator("header")).toContainText("배포 active", { timeout: 60_000 });
 
+  // 다른 spec(기기 대화상자의 turn_off 등)이 이미 HA 서비스를 불렀을 수 있어 기준값부터 센다.
+  const beforeHooks = await request.get("http://ha-control:8090/runtime-hooks");
+  const beforeCalls = ((await beforeHooks.json()) as { haServiceCalls: number }).haServiceCalls;
+
   for (const value of values) {
     const before = await countRuns(page, flowId);
     const set = await request.post("http://ha-control:8090/set-power", {
@@ -77,7 +81,7 @@ test("builds a mean flow and turns on the HA helper once", async ({ page, reques
 
   const hooks = await request.get("http://ha-control:8090/runtime-hooks");
   const hookBody = (await hooks.json()) as { haServiceCalls: number };
-  expect(hookBody.haServiceCalls).toBe(1);
+  expect(hookBody.haServiceCalls).toBe(beforeCalls + 1);
 
   const alert = await request.get("http://ha-control:8090/alert");
   expect((await alert.json() as { state: string }).state).toBe("on");

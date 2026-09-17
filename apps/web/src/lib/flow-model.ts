@@ -215,9 +215,21 @@ export const setJoinNames = (
   });
 };
 
+/**
+ * 팔레트(왼쪽 224px)와 설정 패널(오른쪽 280px) 사이에 두 개씩 줄바꿈해 놓는다.
+ * 1280px 화면에서 레일이 펼쳐져 있어도(220px) 노드가 패널 아래로 숨지 않는다.
+ */
+const DEFAULT_COLUMNS = 2;
+const DEFAULT_LEFT = 240;
+const DEFAULT_STEP_X = 260;
+const DEFAULT_STEP_Y = 140;
+
 export const defaultPosition = (
   index: number,
-): { x: number; y: number } => ({ x: index * 300, y: 80 });
+): { x: number; y: number } => ({
+  x: DEFAULT_LEFT + (index % DEFAULT_COLUMNS) * DEFAULT_STEP_X,
+  y: 80 + Math.floor(index / DEFAULT_COLUMNS) * DEFAULT_STEP_Y,
+});
 
 export const draftConnections = (
   definition: WorkflowDefinition,
